@@ -61,32 +61,57 @@ def create_app(engine=None, runner_factory=Runner):
 
     app = FastAPI(title="Rehearsal", version="0.2.0", lifespan=lifespan)
     app.state.engine, app.state.runner = core, runner
-    app.add_middleware(TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"])
+    app.add_middleware(
+        TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"]
+    )
 
     @app.middleware("http")
     async def boundaries(request, call_next):
-        if request.method in {"POST", "PUT", "PATCH", "DELETE"} and request.url.path.startswith("/api/"):
+        if request.method in {
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE",
+        } and request.url.path.startswith("/api/"):
             if request.headers.get("x-rehearsal-request") != "1":
-                return JSONResponse({"message": "Use the Rehearsal interface to make changes."}, 403)
+                return JSONResponse(
+                    {"message": "Use the Rehearsal interface to make changes."}, 403
+                )
             origin = request.headers.get("origin")
-            if origin and origin not in {"http://127.0.0.1:5180", "http://localhost:5180", "http://127.0.0.1:8780", "http://localhost:8780", str(request.base_url).rstrip("/")}:
-                return JSONResponse({"message": "This request came from an unrecognized origin."}, 403)
+            if origin and origin not in {
+                "http://127.0.0.1:5180",
+                "http://localhost:5180",
+                "http://127.0.0.1:8780",
+                "http://localhost:8780",
+                str(request.base_url).rstrip("/"),
+            }:
+                return JSONResponse(
+                    {"message": "This request came from an unrecognized origin."}, 403
+                )
         return await call_next(request)
 
     @app.exception_handler(Problem)
     async def handle_problem(request, error):
-        return JSONResponse({"code": error.code, "message": error.message}, error.status)
+        return JSONResponse(
+            {"code": error.code, "message": error.message}, error.status
+        )
 
     def person(request):
         session = sessions.get(request.cookies.get("rehearsal_session"))
         if not session or session[1] <= time.time():
-            raise Problem("session_required", "Choose a demo identity to continue.", 401)
+            raise Problem(
+                "session_required", "Choose a demo identity to continue.", 401
+            )
         return session[0]
 
     @app.get("/api/health")
     def health():
         with core.lock:
-            return {"status": "ok", "engine": "FalkorDB", "context_revision": core.graph.context()["revision"]}
+            return {
+                "status": "ok",
+                "engine": "FalkorDB",
+                "context_revision": core.graph.context()["revision"],
+            }
 
     @app.get("/api/workspace")
     def workspace():
@@ -98,12 +123,16 @@ def create_app(engine=None, runner_factory=Runner):
 
     @app.post("/api/session")
     def select_person(body: SessionInput, response: Response):
-        expired = [token for token, (_, until) in sessions.items() if until <= time.time()]
+        expired = [
+            token for token, (_, until) in sessions.items() if until <= time.time()
+        ]
         for token in expired:
             sessions.pop(token, None)
         token = secrets.token_urlsafe(32)
         sessions[token] = (body.person, time.time() + 28800)
-        response.set_cookie("rehearsal_session", token, httponly=True, samesite="strict", max_age=28800)
+        response.set_cookie(
+            "rehearsal_session", token, httponly=True, samesite="strict", max_age=28800
+        )
         return {"person": body.person, "demo": True}
 
     @app.post("/api/runs")
@@ -121,7 +150,10 @@ def create_app(engine=None, runner_factory=Runner):
 
     @app.get("/api/runs/{id}/evidence")
     def evidence(id: str):
-        return JSONResponse(core.get_run(id), headers={"Content-Disposition": f'attachment; filename="{id}.json"'})
+        return JSONResponse(
+            core.get_run(id),
+            headers={"Content-Disposition": f'attachment; filename="{id}.json"'},
+        )
 
     @app.post("/api/policy/propose")
     def propose(body: PolicyInput, request: Request):

@@ -13,9 +13,18 @@ class Repair(StrEnum):
 
 
 REPAIRS = {
-    "rollback": {"title": "Roll back the worker", "description": "Return the export service to its previous release."},
-    "bypass": {"title": "Bypass enrichment", "description": "Skip the failing dependency and restore the response."},
-    "cache": {"title": "Use the verified cache", "description": "Keep the complete export using verified provenance."},
+    "rollback": {
+        "title": "Roll back the worker",
+        "description": "Return the export service to its previous release.",
+    },
+    "bypass": {
+        "title": "Bypass enrichment",
+        "description": "Skip the failing dependency and restore the response.",
+    },
+    "cache": {
+        "title": "Use the verified cache",
+        "description": "Keep the complete export using verified provenance.",
+    },
 }
 
 
@@ -26,4 +35,6 @@ class Problem(Exception):
 
 
 def fingerprint(value: Any) -> str:
-    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+    return hashlib.sha256(
+        json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()

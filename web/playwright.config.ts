@@ -5,7 +5,7 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 30000,
   use: {
-    baseURL: "http://127.0.0.1:5180",
+    baseURL: process.env.REHEARSAL_BASE_URL || "http://127.0.0.1:5180",
     channel:
       process.env.PLAYWRIGHT_CHANNEL === "chromium" ? undefined : "chrome",
     trace: "retain-on-failure",

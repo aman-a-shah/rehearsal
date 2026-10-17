@@ -14,12 +14,7 @@ import {
 import { useState } from "react";
 import { ImpactMap } from "../components/ImpactMap";
 import { Experiments } from "../components/Experiments";
-import {
-  PEOPLE,
-  type Workspace,
-  type Run,
-  type Trial,
-} from "../types";
+import { PEOPLE, type Workspace, type Run, type Trial } from "../types";
 
 type Props = {
   data: Workspace;

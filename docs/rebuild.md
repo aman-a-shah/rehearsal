@@ -1,6 +1,6 @@
 # Rebuild record
 
-The rebuild began on October 17, 2026, using the earlier local Rehearsal prototype as a requirements reference. The incident scenario, technology choices, and evidence-bound repair concept were developed before this repository. Existing dependency version pins are reused. Application modules and the interface are being authored anew here.
+The rebuild began on October 17, 2026, using the earlier local Rehearsal prototype as a requirements reference. The incident scenario, technology choices, and evidence-bound repair concept were developed before this repository. Existing dependency version pins are reused. Application modules and the interface were authored anew here.
 
 Commit dates are the actual commit times. No historical timestamps or earlier test reports are imported as new results.
 
@@ -14,10 +14,10 @@ Commit dates are the actual commit times. No historical timestamps or earlier te
 
 ## Interface audit
 
-| Before | After | Why |
-| --- | --- | --- |
-| Long, dense page with repeated technical panels | One incident canvas with contextual evidence drawers | Keep attention on the next decision |
-| A 1,209-line application component | Focused screens and shared state/actions | Make interaction changes easier to reason about |
-| Three candidate cards with similar visual weight | Comparable experiment rows with an explicit recommended result | Make the failed promise visible |
-| A graph competing with operational detail | A focused dependency map tied to customer status | Explain the actual impact |
-| Raw implementation details in the main flow | Source citations, exported artifacts, and optional trace inspection | Give reviewers evidence when they need it |
+| Before                                           | After                                                               | Why                                             |
+| ------------------------------------------------ | ------------------------------------------------------------------- | ----------------------------------------------- |
+| Long, dense page with repeated technical panels  | One incident canvas with contextual evidence drawers                | Keep attention on the next decision             |
+| A 1,209-line application component               | Focused screens and shared state/actions                            | Make interaction changes easier to reason about |
+| Three candidate cards with similar visual weight | Comparable experiment rows with an explicit recommended result      | Make the failed promise visible                 |
+| A graph competing with operational detail        | A focused dependency map tied to customer status                    | Explain the actual impact                       |
+| Raw implementation details in the main flow      | Source citations, exported artifacts, and optional trace inspection | Give reviewers evidence when they need it       |
