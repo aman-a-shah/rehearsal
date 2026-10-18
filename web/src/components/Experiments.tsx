@@ -1,143 +1,150 @@
-import {
-  ArrowUpRight,
-  Check,
-  Database,
-  History,
-  LoaderCircle,
-  SlidersHorizontal,
-  X,
-} from "lucide-react";
+import { ArrowUpRight, Check, Minus, X } from "lucide-react";
 import { REPAIRS, type Run, type Repair, type Trial } from "../types";
 
-const icons = { rollback: History, bypass: SlidersHorizontal, cache: Database };
+const groups = [
+  { id: "available", label: "Availability", keys: ["available"] },
+  { id: "integrity", label: "Data integrity", keys: ["integrity"] },
+  { id: "provenance", label: "Provenance", keys: ["provenance"] },
+  { id: "freshness", label: "Freshness", keys: ["cache_age", "cache_allowed"] },
+  { id: "control", label: "No regression", keys: ["control"] },
+];
+const mutations: Record<Repair, string> = {
+  rollback: "worker.version → 1",
+  bypass: "enrichment → bypass",
+  cache: "enrichment → verified cache",
+};
 
 export function Experiments({
   run,
   running,
   onTrial,
+  trials: inputTrials,
+  compact = false,
 }: {
-  run: Run | null;
-  running: boolean;
+  run?: Run | null;
+  running?: boolean;
   onTrial: (trial: Trial) => void;
+  trials?: Trial[];
+  compact?: boolean;
 }) {
-  const kinds: Repair[] = ["rollback", "bypass", "cache"];
+  const trials = inputTrials || run?.trials || [];
   return (
-    <section className="experiments" aria-labelledby="experiments-title">
+    <section
+      className={`experiments ${compact ? "compact" : ""}`}
+      aria-labelledby="experiments-title"
+    >
       <div className="section-bar">
         <div>
-          <h2 id="experiments-title">Three options. Test every promise.</h2>
-          <p>Each repair runs on its own copy of the export service.</p>
+          <span className="section-index">02</span>
+          <h2 id="experiments-title">Repair comparison</h2>
+          <span className="small-muted">
+            Results from isolated service trials
+          </span>
         </div>
-        <span className="small-muted">
-          {run?.trials.length || 0} / 3 tested
-        </span>
+        <span className="mono small-muted">{trials.length}/3 tested</span>
       </div>
-      <div className="experiment-table">
-        <div className="experiment-head">
-          <span>Candidate repair</span>
-          <span>HTTP response</span>
-          <span>Customer promises</span>
-          <span>Verdict</span>
-        </div>
-        {kinds.map((kind, index) => {
-          const trial = run?.trials.find((t) => t.repair === kind);
-          const Icon = icons[kind];
-          const affected = run?.context.affected || ["alder", "beacon"];
-          const responsesOk =
-            trial && affected.every((id) => trial.exports[id]?.status === 200);
-          const promisesOk =
-            trial &&
-            trial.checks
-              .filter((c) =>
-                [
-                  "provenance",
-                  "integrity",
-                  "cache_age",
-                  "cache_allowed",
-                ].includes(c.key),
-              )
-              .every((c) => c.passed);
-          const working =
-            running && !trial && index === (run?.trials.length || 0);
-          return (
-            <button
-              key={kind}
-              className={`experiment-row ${trial?.passed ? "passing" : ""}`}
-              onClick={() => trial && onTrial(trial)}
-              disabled={!trial}
-            >
-              <span className="experiment-name">
-                <span className="row-number">0{index + 1}</span>
-                <span className="repair-icon">
-                  <Icon size={17} />
-                </span>
-                <span>
-                  <strong>{REPAIRS[kind].name}</strong>
-                  <small>{REPAIRS[kind].description}</small>
-                </span>
-              </span>
-              <span className="result-cell" data-label="HTTP">
-                {trial ? (
-                  <>
-                    <i className={responsesOk ? "good-dot" : "bad-dot"} />
-                    {responsesOk ? "200 OK" : "409 · Incompatible"}
-                  </>
-                ) : (
-                  <span className="untested">Not tested</span>
-                )}
-              </span>
-              <span className="result-cell" data-label="Promises">
-                {trial ? (
-                  <>
-                    <span className={promisesOk ? "good-text" : "bad-text"}>
-                      {promisesOk ? <Check size={14} /> : <X size={14} />}
-                    </span>
-                    {promisesOk
-                      ? "Preserved"
-                      : kind === "bypass"
-                        ? "Provenance missing"
-                        : kind === "cache"
-                          ? "Policy not satisfied"
-                          : "Output unavailable"}
-                  </>
-                ) : (
-                  <span className="untested">Not tested</span>
-                )}
-              </span>
-              <span className="verdict">
-                {trial ? (
-                  <>
-                    <span
-                      className={`status-tag ${trial.passed ? "success" : "neutral"}`}
-                    >
-                      {trial.passed ? "Recommended" : "Rejected"}
-                    </span>
-                    <ArrowUpRight size={15} />
-                  </>
-                ) : working ? (
-                  <span className="working">
-                    <LoaderCircle className="spin" size={15} /> Testing
+      <div className="comparison-scroll">
+        <div className="experiment-table">
+          <div className="experiment-head">
+            <span>Candidate</span>
+            {groups.map((g) => (
+              <span key={g.id}>{g.label}</span>
+            ))}
+            <span>Decision</span>
+          </div>
+          {(["rollback", "bypass", "cache"] as Repair[]).map((kind, index) => {
+            const trial = trials.find((t) => t.repair === kind);
+            return (
+              <button
+                key={kind}
+                className={`experiment-row ${trial?.passed ? "passing" : ""}`}
+                disabled={!trial}
+                onClick={() => trial && onTrial(trial)}
+              >
+                <span className="experiment-name">
+                  <span className="row-number">0{index + 1}</span>
+                  <span>
+                    <strong>{REPAIRS[kind].name}</strong>
+                    <small>{mutations[kind]}</small>
                   </span>
-                ) : (
-                  <span className="muted">Pending</span>
-                )}
-              </span>
-            </button>
-          );
-        })}
+                </span>
+                {groups.map((group) => {
+                  const checks = trial?.checks.filter((c) =>
+                    group.keys.includes(c.key),
+                  );
+                  const pass = checks?.every((c) => c.passed);
+                  return (
+                    <span
+                      className="matrix-cell"
+                      key={group.id}
+                      data-label={group.label}
+                    >
+                      {!trial ? (
+                        <span className="unrun-line" aria-label="Not tested">
+                          —
+                        </span>
+                      ) : !checks?.length ? (
+                        <span className="matrix-na" title="Not applicable">
+                          <Minus size={14} />
+                          <span className="sr-only">Not applicable</span>
+                        </span>
+                      ) : (
+                        <span
+                          className={`matrix-check ${pass ? "pass" : "fail"}`}
+                          title={
+                            checks
+                              .filter((c) => !c.passed)
+                              .map((c) => c.title)
+                              .join(", ") || "All checks passed"
+                          }
+                        >
+                          {pass ? <Check size={13} /> : <X size={13} />}
+                          <span className="sr-only">
+                            {pass ? "Passed" : "Failed"}
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                  );
+                })}
+                <span className="verdict">
+                  {trial ? (
+                    <>
+                      <span
+                        className={`status-tag ${trial.passed ? "success" : "rejected"}`}
+                      >
+                        {trial.passed ? "Eligible" : "Rejected"}
+                      </span>
+                      <ArrowUpRight size={13} />
+                    </>
+                  ) : (
+                    <span className="small-muted">
+                      {running ? "In progress" : "Not tested"}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-      {run?.trials.some(
+      {trials.some(
         (t) =>
           t.repair === "bypass" && !t.passed && t.exports.alder?.status === 200,
       ) && (
-        <p className="experiment-insight">
-          <span className="insight-mark">!</span>
+        <div className="experiment-insight">
+          <span className="insight-marker">!</span>
           <span>
-            <strong>A healthy response can still break a promise.</strong>{" "}
-            Bypassing enrichment returns HTTP 200, but removes the provenance
-            Alder requires.
+            <strong>Bypass drops Alder’s required provenance.</strong> Its HTTP
+            200 response still fails the customer’s requirement.
           </span>
-        </p>
+          <button
+            className="text-button"
+            onClick={() => onTrial(trials.find((t) => t.repair === "bypass")!)}
+          >
+            Inspect output <ArrowUpRight size={13} />
+          </button>
+        </div>
       )}
     </section>
   );

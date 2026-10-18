@@ -1,28 +1,54 @@
-import type { Workspace } from "../types";
-import { ArrowRight, GitBranch } from "lucide-react";
+import { useState } from "react";
+import { ArrowRight, ArrowUpRight, GitBranch, Layers2 } from "lucide-react";
+import type { Trial, Workspace } from "../types";
 
-const positions: Record<string, [number, number]> = {
-  alder: [28, 42],
-  beacon: [28, 111],
-  cedar: [28, 185],
-  rich: [300, 76],
-  basic: [300, 185],
-  enrichment: [572, 76],
-  worker: [572, 185],
+const simple: Record<string, [number, number]> = {
+  alder: [24, 48],
+  beacon: [24, 128],
+  cedar: [24, 222],
+  rich: [352, 88],
+  basic: [352, 222],
+  enrichment: [680, 88],
+  worker: [680, 222],
+};
+const expanded: Record<string, [number, number]> = {
+  alder: [18, 50],
+  beacon: [18, 130],
+  cedar: [18, 240],
+  rich: [240, 90],
+  basic: [240, 240],
+  "build-rich": [462, 90],
+  "build-basic": [462, 240],
+  enrich: [684, 90],
+  worker: [684, 240],
+  enrichment: [906, 90],
 };
 
 export function ImpactMap({
   data,
+  trial,
   onNode,
   onTrace,
 }: {
   data: Workspace;
+  trial?: Trial;
   onNode: (id: string) => void;
   onTrace: () => void;
 }) {
+  const [detail, setDetail] = useState(false);
+  const [hovered, setHovered] = useState<string | null>(null);
   const { nodes, edges } = data.diagram;
-  const healthy = Object.values(data.exports).every((e) => e.status === 200);
+  const outputs = trial?.exports || data.exports;
+  const healthy = Object.values(outputs).every((e) => e.status === 200);
+  const diverted =
+    trial?.repair === "cache" ||
+    trial?.repair === "bypass" ||
+    (!trial && healthy);
   const find = (id: string) => nodes.find((n) => n.id === id);
+  const positions = detail ? expanded : simple;
+  const nodeWidth = detail ? 180 : 218;
+  const width = detail ? 1104 : 922;
+  const height = detail ? 334 : 314;
   function reaches(
     from: string,
     to: string,
@@ -39,189 +65,221 @@ export function ImpactMap({
       )
       .some((e) => reaches(e.to, to, new Set(visited)));
   }
-  const links = edges
-    .filter((e) => e.type === "USES")
-    .map((e) => ({ from: e.from, to: e.to, direct: true }));
-  for (const capability of nodes.filter((n) => n.kind === "capability"))
-    for (const service of nodes.filter((n) => n.kind === "service"))
-      if (reaches(capability.id, service.id))
-        links.push({ from: capability.id, to: service.id, direct: false });
+  const links = detail
+    ? edges.filter((e) => positions[e.from] && positions[e.to])
+    : edges
+        .filter((e) => e.type === "USES")
+        .map((e) => ({ from: e.from, to: e.to, type: "USES" }));
+  if (!detail)
+    for (const capability of nodes.filter((n) => n.kind === "capability"))
+      for (const service of nodes.filter((n) => n.kind === "service"))
+        if (reaches(capability.id, service.id))
+          links.push({
+            from: capability.id,
+            to: service.id,
+            type: "DEPENDS_ON",
+          });
+  const columns: [number, string][] = detail
+    ? [
+        [18, "Customers"],
+        [240, "Capabilities"],
+        [462, "Operations"],
+        [684, "Execution"],
+        [906, "Dependency"],
+      ]
+    : [
+        [24, "Customers"],
+        [352, "Capabilities"],
+        [680, "Services"],
+      ];
   return (
-    <section className="map-panel panel" aria-labelledby="impact-title">
-      <div className="section-bar">
-        <div className="section-label">
-          <GitBranch size={16} />
-          <h2 id="impact-title">Follow the impact</h2>
+    <section className="map-panel" aria-labelledby="impact-title">
+      <div className="map-heading">
+        <div>
+          <GitBranch size={14} />
+          <h2 id="impact-title">Dependency map</h2>
+          <span className="small-muted">
+            {Object.keys(positions).length} entities
+          </span>
         </div>
-        <button className="text-button" onClick={onTrace}>
-          View graph query <ArrowRight size={14} />
-        </button>
+        <div>
+          <button
+            className="map-toggle"
+            aria-pressed={detail}
+            onClick={() => setDetail(!detail)}
+          >
+            <Layers2 size={12} />
+            {detail ? "Hide operations" : "Show operations"}
+          </button>
+          <button
+            className="icon-button"
+            aria-label="View graph query"
+            onClick={onTrace}
+          >
+            <span className="mono" aria-hidden="true">
+              ‹/›
+            </span>
+          </button>
+        </div>
       </div>
       <div className="map-wrap">
-        <svg
-          className="dependency-map"
-          viewBox="0 0 800 260"
+        <div
+          className={`graph-canvas ${detail ? "expanded" : ""}`}
           aria-label="Customer dependencies from FalkorDB"
         >
-          <defs>
-            <pattern
-              id="map-dots"
-              x="0"
-              y="0"
-              width="18"
-              height="18"
-              patternUnits="userSpaceOnUse"
+          {columns.map(([x, label]) => (
+            <span
+              key={label}
+              className="graph-column"
+              style={{ left: `${(x / width) * 100}%` }}
             >
-              <circle cx="1" cy="1" r="0.7" fill="#d5dae0" />
-            </pattern>
-          </defs>
-          <rect width="800" height="260" fill="url(#map-dots)" />
-          <text x="28" y="23" className="map-label">
-            CUSTOMERS
-          </text>
-          <text x="300" y="23" className="map-label">
-            CAPABILITIES
-          </text>
-          <text x="572" y="23" className="map-label">
-            SERVICES
-          </text>
-          {links.map((edge) => {
-            const a = positions[edge.from],
-              b = positions[edge.to];
-            if (!a || !b || !find(edge.from) || !find(edge.to)) return null;
-            const affected =
-              !healthy &&
-              (data.context.affected.includes(edge.from) ||
-                edge.to === "enrichment");
-            const x = a[0] + 194,
-              y = a[1] + 30,
-              endX = b[0],
-              endY = b[1] + 30;
-            return (
-              <g key={`${edge.from}-${edge.to}`}>
-                <path
-                  d={`M${x} ${y} C${x + 39} ${y}, ${endX - 39} ${endY}, ${endX} ${endY}`}
-                  className={`map-edge ${affected ? "affected" : ""}`}
-                />
-                <circle
-                  cx={endX - 2}
-                  cy={endY}
-                  r="3"
-                  fill={affected ? "#cf6b4a" : "#b8c0ca"}
-                />
-              </g>
-            );
-          })}
+              {label}
+            </span>
+          ))}
+          <svg
+            className="graph-connectors"
+            viewBox={`0 0 ${width} ${height}`}
+            preserveAspectRatio="none"
+            aria-hidden="true"
+          >
+            {links.map((edge) => {
+              const a = positions[edge.from],
+                b = positions[edge.to];
+              if (!a || !b) return null;
+              const affected =
+                !healthy &&
+                (data.context.affected.includes(edge.from) ||
+                  ["rich", "build-rich", "enrich"].includes(edge.from)) &&
+                edge.to !== "worker";
+              const skipped =
+                diverted && (edge.to === "enrichment" || edge.to === "enrich");
+              const focus = hovered === edge.from || hovered === edge.to;
+              const x = a[0] + nodeWidth,
+                y = a[1] + 30,
+                endX = b[0],
+                endY = b[1] + 30;
+              return (
+                <g
+                  key={`${edge.from}-${edge.to}`}
+                  className={hovered && !focus ? "map-dim" : ""}
+                >
+                  <path
+                    d={`M${x} ${y} C${x + (endX - x) / 2} ${y}, ${endX - (endX - x) / 2} ${endY}, ${endX} ${endY}`}
+                    className={`map-edge ${affected ? "affected" : ""} ${focus ? "focused" : ""} ${skipped ? "skipped" : ""}`}
+                  />
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r="2"
+                    className={
+                      affected ? "edge-port affected-port" : "edge-port"
+                    }
+                  />
+                  <circle
+                    cx={endX}
+                    cy={endY}
+                    r="2"
+                    className={
+                      affected ? "edge-port affected-port" : "edge-port"
+                    }
+                  />
+                </g>
+              );
+            })}
+          </svg>
           {Object.entries(positions).map(([id, [x, y]]) => {
             const node = find(id);
             if (!node) return null;
             const customer = node.kind === "customer";
             const failing = customer
-              ? data.exports[id]?.status !== 200
-              : id === "enrichment" && !healthy;
+              ? outputs[id]?.status !== 200
+              : id === "enrichment" && !healthy && !trial;
+            const breach =
+              customer &&
+              trial?.checks.some((c) => c.customer === id && !c.passed) &&
+              !failing;
             const label = customer
-              ? failing
-                ? "Export unavailable"
-                : "Export healthy"
+              ? `HTTP ${outputs[id]?.status} · ${failing ? "unavailable" : breach ? "requirement failed" : "healthy"}`
               : id === "enrichment"
-                ? healthy
-                  ? "Bypassed by repair"
-                  : "Invalid request format"
+                ? diverted
+                  ? "Not called in this branch"
+                  : trial?.repair === "rollback"
+                    ? "Worker stops before request"
+                    : "Request field rejected"
                 : id === "worker"
-                  ? "Shared by all customers"
+                  ? `${trial?.repair === "rollback" ? "v1" : "v2"} · shared infrastructure`
                   : id === "rich"
-                    ? "Requires enrichment"
-                    : "Independent of enrichment";
+                    ? "Provenance enrichment"
+                    : id === "basic"
+                      ? "No enrichment required"
+                      : node.kind === "operation"
+                        ? "Graph dependency"
+                        : node.kind;
             return (
-              <g
+              <button
                 key={id}
-                transform={`translate(${x} ${y})`}
-                className={`map-node ${failing ? "failing" : ""}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => onNode(id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onNode(id);
-                  }
+                className={`graph-node ${failing ? "failing" : breach ? "breach" : customer ? "healthy" : ""} ${diverted && id === "enrichment" ? "bypassed" : ""}`}
+                style={{
+                  left: `${(x / width) * 100}%`,
+                  top: `${(y / height) * 100}%`,
+                  width: `${(nodeWidth / width) * 100}%`,
+                  height: `${(60 / height) * 100}%`,
                 }}
+                onClick={() => onNode(id)}
+                onMouseEnter={() => setHovered(id)}
+                onMouseLeave={() => setHovered(null)}
+                onFocus={() => setHovered(id)}
+                onBlur={() => setHovered(null)}
               >
-                <title>
-                  {node.name}: {label}
-                </title>
-                <rect className="node-surface" width="194" height="60" rx="8" />
-                <rect
-                  x="12"
-                  y="17"
-                  width="26"
-                  height="26"
-                  rx="6"
-                  className="node-icon-bg"
-                />
-                <text
-                  x="25"
-                  y="35"
-                  textAnchor="middle"
-                  className="node-initial"
-                  aria-hidden="true"
-                >
-                  {customer
-                    ? node.name[0]
-                    : node.kind === "capability"
-                      ? "↗"
-                      : "⌘"}
-                </text>
-                <text
-                  x="49"
-                  y="26"
-                  className="node-title"
-                  id={`node-name-${id}`}
-                >
-                  {node.name}
-                </text>
-                <text
-                  x="49"
-                  y="44"
-                  className="node-subtitle"
-                  id={`node-state-${id}`}
-                >
-                  {label}
-                </text>
-                <circle
-                  cx="181"
-                  cy="13"
-                  r="3"
-                  fill={failing ? "#cc593d" : customer ? "#36816a" : "#a3adb8"}
-                />
-              </g>
+                <span className="graph-node-title">{node.name}</span>{" "}
+                <span className="graph-node-state">{label}</span>
+                <i aria-hidden="true" />
+              </button>
             );
           })}
-        </svg>
+        </div>
         <div className="mobile-paths">
-          {data.context.paths.map((path) => (
+          {[
+            ...data.context.paths.map((path) => ({
+              customer: path.customer,
+              capability: path.capability,
+            })),
+            { customer: "cedar", capability: "basic" },
+          ].map((path) => (
             <button key={path.customer} onClick={() => onNode(path.customer)}>
               <strong>{find(path.customer)?.name}</strong>
-              <ArrowRight size={14} />
+              <ArrowRight size={12} />
               <span>{find(path.capability)?.name}</span>
-              <ArrowRight size={14} />
-              <span>Enrichment</span>
+              <span
+                className={
+                  outputs[path.customer]?.status === 200
+                    ? "good-text"
+                    : "bad-text"
+                }
+              >
+                HTTP {outputs[path.customer]?.status}
+              </span>
             </button>
           ))}
-          <button onClick={() => onNode("cedar")}>
-            <strong>Cedar</strong>
-            <ArrowRight size={14} />
-            <span>Basic export</span>
-            <span className="healthy-text">Healthy</span>
-          </button>
         </div>
       </div>
       <div className="map-caption">
-        <span className="legend">
+        <span>
           <i className={healthy ? "good-dot" : "bad-dot"} />
-          {healthy ? "Customer exports restored" : "Affected dependency path"}
+          {trial
+            ? "Isolated trial output"
+            : healthy
+              ? "Customer exports restored"
+              : "Affected dependency"}
         </span>
-        <span>Cedar shares the worker, but never calls enrichment.</span>
+        <span className="map-caption-secondary">
+          {trial?.repair === "bypass"
+            ? "A healthy response can still violate a requirement."
+            : "Cedar never calls enrichment."}
+        </span>
+        <button onClick={onTrace}>
+          FalkorDB <ArrowUpRight size={11} />
+        </button>
       </div>
     </section>
   );

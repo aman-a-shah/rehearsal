@@ -166,7 +166,7 @@ export function Company(props: Props) {
         <p className="eyebrow">
           Company context · Revision {data.context.revision}
         </p>
-        <h1>The facts behind the decision.</h1>
+        <h1>Company context</h1>
         <p>
           Agreements set the constraints. People hold the authority. Every
           decision has a source.

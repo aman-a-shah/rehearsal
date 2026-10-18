@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .state/
+.state-*/
 __pycache__/
 .pytest_cache/
 *.pyc

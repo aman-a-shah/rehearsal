@@ -4,7 +4,6 @@ import {
   AlertCircle,
   ArrowRight,
   BookOpen,
-  ChevronRight,
   CircleHelp,
   Code2,
   Database,
@@ -12,12 +11,17 @@ import {
   FileText,
   GitBranch,
   History,
-  Layers3,
   Menu,
+  Search,
+  Settings2,
   RotateCcw,
   ShieldCheck,
   X,
 } from "lucide-react";
+import { Connections } from "./screens/Connections";
+import { CommandMenu, type Command } from "./components/CommandMenu";
+import { RunTimeline } from "./components/RunTimeline";
+import { Experiments } from "./components/Experiments";
 import { Drawer } from "./components/Drawer";
 import {
   ApprovalReview,
@@ -41,18 +45,20 @@ import {
 } from "./types";
 
 type Panel =
-  | { type: "trial"; trial: Trial }
+  | { type: "trial"; trial: Trial; sources?: Source[] }
+  | { type: "history"; run: Run }
   | { type: "source"; source: Source; historical?: boolean }
-  | { type: "node"; id: string }
+  | { type: "node"; id: string; trial?: Trial }
   | { type: "receipt"; receipt: Receipt }
   | { type: "approval" | "trace" | "help" | "reset" };
 const pages: { id: Page; name: string; icon: typeof Activity }[] = [
   { id: "incident", name: "Incident room", icon: Activity },
   { id: "context", name: "Company context", icon: GitBranch },
   { id: "decisions", name: "Decision log", icon: History },
+  { id: "connections", name: "Connections", icon: Settings2 },
 ];
 function readPage(): Page {
-  const hash = window.location.hash.slice(1);
+  const hash = window.location.hash.slice(1).split("/")[0];
   return pages.some((p) => p.id === hash) ? (hash as Page) : "incident";
 }
 
@@ -74,6 +80,17 @@ export default function App() {
   const [page, setPage] = useState<Page>(readPage);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
+  const [commandOpen, setCommandOpen] = useState(false);
+  useEffect(() => {
+    const shortcut = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCommandOpen((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", shortcut);
+    return () => window.removeEventListener("keydown", shortcut);
+  }, []);
   const [traceTab, setTraceTab] = useState<"tools" | "queries">("tools");
   useEffect(() => {
     const listener = () => setPage(readPage());
@@ -116,7 +133,60 @@ export default function App() {
     setTraceTab("tools");
     setPanel({ type: "trace" });
   };
-  const currentPage = pages.find((p) => p.id === page)!;
+  const commands: Command[] = [
+    ...pages.map((p) => ({
+      id: p.id,
+      title: p.name,
+      detail: "Navigate",
+      action: () => navigate(p.id),
+    })),
+    {
+      id: "lab",
+      title: "Open policy lab",
+      detail: "Test a counterfactual",
+      action: () => {
+        navigate("incident");
+        window.location.hash = "incident/lab";
+      },
+    },
+    {
+      id: "run",
+      title: "Run rehearsal",
+      detail: "Guided demo · real tools",
+      disabled: running || busy || !!data?.changes.length,
+      action: () => {
+        navigate("incident");
+        start("guided");
+      },
+    },
+    {
+      id: "boundaries",
+      title: "Run boundary tests",
+      detail: "Replay policy and freshness scenarios",
+      action: () => {
+        navigate("incident");
+        window.location.hash = "incident/boundaries";
+      },
+    },
+    {
+      id: "trace",
+      title: "Inspect execution trace",
+      detail: "MCP calls and graph queries",
+      action: toolTrace,
+    },
+    ...(data?.context.sources.map((source) => ({
+      id: source.key,
+      title: source.title,
+      detail: `${source.author} · source revision ${source.revision}`,
+      action: () => openSource(source.key),
+    })) || []),
+    {
+      id: "help",
+      title: "How Rehearsal works",
+      detail: "Product walkthrough",
+      action: () => setPanel({ type: "help" }),
+    },
+  ];
   const currentSource =
     panel?.type === "source"
       ? panel.historical
@@ -129,21 +199,23 @@ export default function App() {
       ? data?.diagram.nodes.find((n) => n.id === panel.id)
       : null;
   const panelTitle =
-    panel?.type === "trial"
-      ? REPAIRS[panel.trial.repair].name
-      : currentSource
-        ? currentSource.title
-        : node
-          ? node.name
-          : panel?.type === "receipt"
-            ? "Decision record"
-            : panel?.type === "approval"
-              ? "Review the proposed repair"
-              : panel?.type === "trace"
-                ? "An inspectable chain of evidence"
-                : panel?.type === "reset"
-                  ? "Reset the sample workspace?"
-                  : "How Rehearsal works";
+    panel?.type === "history"
+      ? "Rehearsal record"
+      : panel?.type === "trial"
+        ? REPAIRS[panel.trial.repair].name
+        : currentSource
+          ? currentSource.title
+          : node
+            ? node.name
+            : panel?.type === "receipt"
+              ? "Decision record"
+              : panel?.type === "approval"
+                ? "Review the proposed repair"
+                : panel?.type === "trace"
+                  ? "An inspectable chain of evidence"
+                  : panel?.type === "reset"
+                    ? "Reset the sample workspace?"
+                    : "How Rehearsal works";
   const panelEyebrow =
     panel?.type === "trial"
       ? "Experiment evidence"
@@ -157,7 +229,7 @@ export default function App() {
               ? "Under the hood"
               : "Rehearsal";
   return (
-    <div className="app-shell">
+    <div className={`app-shell page-${page}`}>
       <a
         href="#main-content"
         className="skip-link"
@@ -168,142 +240,97 @@ export default function App() {
       >
         Skip to content
       </a>
-      {mobileNav && (
-        <button
-          className="nav-scrim"
-          aria-label="Close navigation"
-          onClick={() => setMobileNav(false)}
-        />
-      )}
-      <aside className={`sidebar ${mobileNav ? "mobile-open" : ""}`}>
-        <a
-          className="brand"
-          href="#incident"
-          onClick={() => navigate("incident")}
-        >
-          <img src="/favicon.svg" alt="" />
-          <span>
-            rehearsal<span className="brand-period">.</span>
+      <header className="masthead">
+        <div className="masthead-brand">
+          <a
+            className="brand"
+            href="#incident"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("incident");
+            }}
+          >
+            rehearsal
+          </a>
+          <span className="workspace-divider" />
+          <span className="workspace-name">
+            Harbor <span className="environment-label">SANDBOX</span>
           </span>
-        </a>
-        <div className="workspace-identity">
-          <span className="company-mark">H</span>
-          <div>
-            <strong>Harbor</strong>
-            <small>Sample workspace</small>
-          </div>
-          <Layers3 size={15} />
         </div>
-        <div className="nav-label">Workspace</div>
-        <nav aria-label="Workspace navigation">
-          {pages.map((item) => {
-            const Icon = item.icon;
-            return (
+        <div className={`navigation-bar ${mobileNav ? "mobile-open" : ""}`}>
+          <nav aria-label="Workspace navigation">
+            {pages.map((item) => (
               <a
-                href={`#${item.id}`}
                 key={item.id}
+                href={`#${item.id}`}
                 aria-current={page === item.id ? "page" : undefined}
                 onClick={(e) => {
                   e.preventDefault();
                   navigate(item.id);
                 }}
               >
-                <Icon size={17} />
                 <span>{item.name}</span>
-                {item.id === "incident" && <span className="nav-count">1</span>}
                 {item.id === "decisions" && !!data?.decisions.length && (
                   <span className="nav-count">{data.decisions.length}</span>
                 )}
               </a>
-            );
-          })}
-        </nav>
-        <div className="sidebar-divider" />
-        <div className="nav-label">Current incident</div>
-        <button className="incident-nav" onClick={() => navigate("incident")}>
-          <span
-            className={`incident-line ${data && Object.values(data.exports).every((e) => e.status === 200) ? "resolved" : ""}`}
-          />
-          <div>
-            <strong>INC-204</strong>
-            <span>Rich exports failing</span>
-          </div>
-          <ChevronRight size={14} />
-        </button>
-        <div className="sidebar-bottom">
-          <div className="sample-note">
-            <span className="sample-symbol">
-              <Database size={15} />
-            </span>
-            <p>
-              Real graph.
-              <br />
-              Synthetic company.
-            </p>
-          </div>
+            ))}
+          </nav>
+        </div>
+        <div className="masthead-tools">
           <button
-            className="sidebar-link"
-            onClick={() => setPanel({ type: "help" })}
+            className="command-trigger"
+            onClick={() => setCommandOpen(true)}
+            aria-labelledby="workspace-search-label workspace-search-shortcut"
           >
-            <CircleHelp size={16} />
-            How it works
+            <Search size={15} />
+            <span id="workspace-search-label">Search workspace</span>
+            <kbd id="workspace-search-shortcut">⌘ K</kbd>
           </button>
           <button
-            className="sidebar-link"
+            className="icon-button reset-link"
+            aria-label="Reset sample workspace"
+            title="Reset sample workspace"
             onClick={() => setPanel({ type: "reset" })}
             disabled={running || busy}
           >
             <RotateCcw size={15} />
-            Reset sample workspace
+          </button>
+          <button
+            className="icon-button"
+            aria-label="How it works"
+            onClick={() => setPanel({ type: "help" })}
+          >
+            <CircleHelp size={18} />
           </button>
           <div className="identity-picker">
             <span className="avatar">{PEOPLE[person].initials}</span>
-            <div>
-              <label htmlFor="demo-identity">Demo identity</label>
-              <select
-                id="demo-identity"
-                value={person}
-                onChange={(e) => switchIdentity(e.target.value as Person)}
-                disabled={busy}
-              >
-                <option value="nia">Nia Chen · owner</option>
-                <option value="mira">Mira Patel · expert</option>
-                <option value="reviewer">Policy reviewer</option>
-                <option value="owen">Owen Brooks · former owner</option>
-              </select>
-            </div>
+            <label className="sr-only" htmlFor="demo-identity">
+              Demo identity
+            </label>
+            <select
+              id="demo-identity"
+              value={person}
+              onChange={(e) => switchIdentity(e.target.value as Person)}
+              disabled={busy}
+            >
+              <option value="nia">Nia Chen · owner</option>
+              <option value="mira">Mira Patel · expert</option>
+              <option value="reviewer">Policy reviewer</option>
+              <option value="owen">Owen Brooks · former owner</option>
+            </select>
           </div>
+          <button
+            className="icon-button mobile-menu"
+            aria-label={mobileNav ? "Close navigation" : "Open navigation"}
+            aria-expanded={mobileNav}
+            onClick={() => setMobileNav(!mobileNav)}
+          >
+            {mobileNav ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
-      </aside>
+      </header>
       <div className="app-main">
-        <header className="topbar">
-          <div className="breadcrumbs">
-            <button
-              className="icon-button mobile-menu"
-              aria-label="Open navigation"
-              onClick={() => setMobileNav(true)}
-            >
-              <Menu size={20} />
-            </button>
-            <span>Harbor</span>
-            <ChevronRight size={13} />
-            <strong>{currentPage.name}</strong>
-          </div>
-          <div className="topbar-right">
-            <span className="graph-status">
-              <i className={data ? "good-dot" : "neutral-dot"} />
-              {data ? "FalkorDB connected" : "Connecting to workspace"}
-            </span>
-            <a
-              href="https://github.com/aman-a-shah/rehearsal"
-              target="_blank"
-              rel="noreferrer"
-              className="source-link"
-            >
-              Source <ExternalLink size={13} />
-            </a>
-          </div>
-        </header>
         <main id="main-content" className="main-content" tabIndex={-1}>
           {error && (
             <div className="error-banner" role={panel ? undefined : "alert"}>
@@ -355,14 +382,30 @@ export default function App() {
                   running={running}
                   busy={busy}
                   onRun={start}
-                  onTrial={(trial) => setPanel({ type: "trial", trial })}
+                  onTrial={(trial) =>
+                    setPanel({
+                      type: "trial",
+                      trial,
+                      sources: trial.hypothetical
+                        ? data.context.sources
+                        : run?.context.sources,
+                    })
+                  }
                   onSource={openSource}
-                  onNode={(id) => setPanel({ type: "node", id })}
+                  onNode={(id, trial) => setPanel({ type: "node", id, trial })}
                   onTrace={toolTrace}
                   onGraphTrace={graphTrace}
                   onReview={() => setPanel({ type: "approval" })}
                   onHelp={() => setPanel({ type: "help" })}
                   onDecisions={() => navigate("decisions")}
+                  onConnections={() => navigate("connections")}
+                />
+              )}
+              {page === "connections" && (
+                <Connections
+                  data={data}
+                  onConnected={refresh}
+                  running={running}
                 />
               )}
               {page === "context" && (
@@ -379,6 +422,8 @@ export default function App() {
               {page === "decisions" && (
                 <Decisions
                   receipts={data.decisions}
+                  runs={data.runs}
+                  onRun={(run) => setPanel({ type: "history", run })}
                   onIncident={() => navigate("incident")}
                   onReceipt={(receipt) =>
                     setPanel({ type: "receipt", receipt })
@@ -389,16 +434,34 @@ export default function App() {
           )}
         </main>
         <footer className="app-footer">
-          <span>Test the repair. Keep the promise.</span>
-          <span>A local workspace for evidence-led decisions.</span>
+          <span>
+            <i className={data ? "good-dot" : "neutral-dot"} />{" "}
+            {data ? "FalkorDB online" : "Connecting to graph"}
+          </span>
+          <span>
+            Harbor · synthetic workspace <span className="footer-dot">·</span>{" "}
+            <a
+              href="https://github.com/aman-a-shah/rehearsal"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Source <ExternalLink size={11} />
+            </a>
+          </span>
         </footer>
       </div>
+      {commandOpen && (
+        <CommandMenu
+          commands={commands}
+          onClose={() => setCommandOpen(false)}
+        />
+      )}
       {panel && (
         <Drawer
           title={panelTitle}
           eyebrow={panelEyebrow}
           onClose={() => setPanel(null)}
-          wide={panel.type === "trace"}
+          wide={panel.type === "trace" || panel.type === "history"}
         >
           {error && (
             <div className="callout warning" role="alert">
@@ -406,7 +469,39 @@ export default function App() {
             </div>
           )}
           {panel.type === "trial" && (
-            <TrialEvidence trial={panel.trial} onSource={openSource} />
+            <TrialEvidence
+              trial={panel.trial}
+              onSource={(key) => {
+                const source = panel.sources?.find((s) => s.key === key);
+                if (source)
+                  setPanel({ type: "source", source, historical: true });
+                else openSource(key);
+              }}
+            />
+          )}
+          {panel.type === "history" && (
+            <>
+              <div className="callout">
+                <strong>
+                  Saved investigation · context r{panel.run.context.revision}
+                </strong>
+                <p>
+                  This is the evidence recorded during this run. Current
+                  approval authority stays with the active incident.
+                </p>
+              </div>
+              <Experiments
+                run={panel.run}
+                onTrial={(trial) =>
+                  setPanel({
+                    type: "trial",
+                    trial,
+                    sources: panel.run.context.sources,
+                  })
+                }
+              />
+              <RunTimeline run={panel.run} running={false} />
+            </>
           )}
           {currentSource && (
             <>
@@ -448,16 +543,31 @@ export default function App() {
                   <p>Connected in the current FalkorDB context.</p>
                 </div>
               </div>
-              {data.exports[node.id] && (
+              {(panel.trial?.exports[node.id] || data.exports[node.id]) && (
                 <>
-                  <h3>Current export</h3>
+                  <h3>
+                    {panel.trial ? "Isolated trial export" : "Current export"}
+                  </h3>
                   <div className="code-window">
                     <div>
                       <span>GET /exports/{node.id}</span>
-                      <span>HTTP {data.exports[node.id].status}</span>
+                      <span>
+                        HTTP{" "}
+                        {
+                          (
+                            panel.trial?.exports[node.id] ||
+                            data.exports[node.id]
+                          ).status
+                        }
+                      </span>
                     </div>
                     <pre>
-                      {JSON.stringify(data.exports[node.id].body, null, 2)}
+                      {JSON.stringify(
+                        (panel.trial?.exports[node.id] || data.exports[node.id])
+                          .body,
+                        null,
+                        2,
+                      )}
                     </pre>
                   </div>
                 </>
@@ -595,10 +705,10 @@ export default function App() {
             <>
               <div className="help-intro">
                 <ShieldCheck size={30} />
-                <h3>Confidence comes from the output.</h3>
+                <h3>Test a repair before approving it</h3>
                 <p>
-                  Rehearsal follows company evidence, runs possible repairs, and
-                  brings the tested decision to the person who owns it.
+                  Compare repair outputs against customer requirements, then
+                  review a passing option as the service owner.
                 </p>
               </div>
               <ol className="help-steps">
@@ -614,8 +724,8 @@ export default function App() {
                   <strong>Compare three real experiments</strong>
                   <p>
                     Each repair runs against a separate SQLite copy through
-                    working HTTP handlers. Inspect the exported JSON, not just
-                    the response status.
+                    working HTTP handlers. Compare the exported JSON with each
+                    customer’s requirements.
                   </p>
                 </li>
                 <li>
@@ -640,7 +750,7 @@ export default function App() {
                 <p>
                   The guided demo uses a fixed MCP tool sequence. To let a model
                   choose the calls, copy <code>.env.example</code> to{" "}
-                  <code>.env</code>, set <code>ANTHROPIC_API_KEY</code>, and
+                  <code>.env</code>, set <code>BACKBOARD_API_KEY</code>, and
                   restart the server.
                 </p>
               </div>

@@ -12,22 +12,27 @@ import {
   titleCase,
   type Receipt,
   type Source,
+  type Run,
 } from "../types";
 
 export function Decisions({
   receipts,
   onIncident,
   onReceipt,
+  runs,
+  onRun,
 }: {
   receipts: Receipt[];
   onIncident: () => void;
   onReceipt: (receipt: Receipt) => void;
+  runs: Run[];
+  onRun: (run: Run) => void;
 }) {
   return (
     <>
       <header className="page-heading">
         <p className="eyebrow">Decision log</p>
-        <h1>A record you can stand behind.</h1>
+        <h1>Decision log</h1>
         <p>
           The repair, its approver, the evidence, and the customer outcome. Kept
           together.
@@ -77,7 +82,7 @@ export function Decisions({
               <History size={28} />
             </span>
           </div>
-          <h2>Your first decision starts with evidence.</h2>
+          <h2>No approved repairs yet</h2>
           <p>
             Run a rehearsal and approve a passing repair. Its source records and
             verified outcome will appear here.
@@ -86,6 +91,65 @@ export function Decisions({
             Open the incident <ArrowRight size={16} />
           </button>
         </div>
+      )}
+      {runs.length > 0 && (
+        <section className="run-archive">
+          <div className="section-bar">
+            <div>
+              <h2>Rehearsal history</h2>
+              <span className="small-muted">
+                Completed, blocked, and interrupted investigations
+              </span>
+            </div>
+            <span className="mono small-muted">{runs.length} runs</span>
+          </div>
+          <div className="archive-table">
+            <div className="archive-head">
+              <span>Investigation</span>
+              <span>Mode</span>
+              <span>Tests</span>
+              <span>Outcome</span>
+            </div>
+            {runs.map((run) => (
+              <button
+                key={run.id}
+                className="archive-row"
+                onClick={() => onRun(run)}
+              >
+                <span>
+                  <strong className="mono">{run.id.slice(0, 12)}</strong>
+                  <small>
+                    {new Date(run.created_at * 1000).toLocaleString([], {
+                      dateStyle: "short",
+                      timeStyle: "short",
+                    })}{" "}
+                    · context r{run.context.revision}
+                  </small>
+                </span>
+                <span>
+                  {run.mode === "live" ? "Live agent" : "Guided demo"}
+                </span>
+                <span>{run.trials.length}/3</span>
+                <span
+                  className={`status-tag ${run.status === "completed" ? "success" : run.status === "blocked" || run.status === "error" ? "incident" : "neutral"}`}
+                >
+                  {(
+                    {
+                      awaiting_approval: "Awaiting approval",
+                      completed: "Verified",
+                      blocked: "No eligible repair",
+                      error: "Stopped",
+                      queued: "Queued",
+                      running: "Running",
+                      interrupted: "Interrupted",
+                    } as Record<string, string>
+                  )[run.status] || run.status}
+                  <ArrowRight size={12} />
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
       )}
     </>
   );

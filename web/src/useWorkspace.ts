@@ -10,7 +10,14 @@ export async function request<T>(path: string, body?: unknown): Promise<T> {
         : { "Content-Type": "application/json", "X-Rehearsal-Request": "1" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = await response.json();
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(
+      "The workspace server is unavailable. Check the connection and retry.",
+    );
+  }
   if (!response.ok)
     throw new Error(
       data.message ||
@@ -57,7 +64,7 @@ export function useWorkspace() {
   const run = data?.runs[0] ?? null;
   const running = !!run && ["queued", "running"].includes(run.status);
   useEffect(() => {
-    if (!running || !run) return;
+    if (run?.memory_sync !== "pending") return;
     let cancelled = false;
     let timer: number;
     const poll = async () => {
@@ -68,13 +75,48 @@ export function useWorkspace() {
           previous
             ? {
                 ...previous,
-                runs: [
-                  updated,
-                  ...previous.runs.filter((r) => r.id !== updated.id),
-                ],
+                runs: previous.runs.map((r) =>
+                  r.id === updated.id ? updated : r,
+                ),
               }
             : previous,
         );
+        if (updated.memory_sync !== "pending") return;
+      } catch {
+        if (cancelled) return;
+      }
+      timer = window.setTimeout(poll, 1500);
+    };
+    timer = window.setTimeout(poll, 1000);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [run?.id, run?.memory_sync]);
+  useEffect(() => {
+    if (!running || !run) return;
+    let cancelled = false;
+    let timer: number;
+    let fallbackStarted = false;
+    const update = (updated: Run) => {
+      if (cancelled) return;
+      setData((previous) =>
+        previous
+          ? {
+              ...previous,
+              runs: [
+                updated,
+                ...previous.runs.filter((r) => r.id !== updated.id),
+              ],
+            }
+          : previous,
+      );
+    };
+    const poll = async () => {
+      try {
+        const updated = await request<Run>(`/runs/${run.id}`);
+        if (cancelled) return;
+        update(updated);
         if (!["queued", "running"].includes(updated.status)) {
           await refresh();
           return;
@@ -82,11 +124,37 @@ export function useWorkspace() {
       } catch (e) {
         if (!cancelled) setError((e as Error).message);
       }
-      if (!cancelled) timer = window.setTimeout(poll, 450);
+      if (!cancelled) timer = window.setTimeout(poll, 1200);
     };
-    void poll();
+    const stream = new EventSource(`/api/runs/${run.id}/events`);
+    stream.onmessage = (event) => {
+      try {
+        const updated = JSON.parse(event.data) as Run;
+        update(updated);
+        if (!["queued", "running"].includes(updated.status)) {
+          stream.close();
+          void refresh().catch((e) => {
+            if (!cancelled) setError(e.message);
+          });
+        }
+      } catch {
+        stream.close();
+        if (!fallbackStarted) {
+          fallbackStarted = true;
+          void poll();
+        }
+      }
+    };
+    stream.onerror = () => {
+      stream.close();
+      if (!cancelled && !fallbackStarted) {
+        fallbackStarted = true;
+        void poll();
+      }
+    };
     return () => {
       cancelled = true;
+      stream.close();
       window.clearTimeout(timer);
     };
   }, [running, run?.id, refresh]);

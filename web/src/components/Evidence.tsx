@@ -28,9 +28,19 @@ export function TrialEvidence({
   onSource: (key: string) => void;
 }) {
   const [customer, setCustomer] = useState("alder");
+  const [showBaseline, setShowBaseline] = useState(false);
   const output = trial.exports[customer];
   return (
     <>
+      {trial.hypothetical && (
+        <div className="callout">
+          <strong>Hypothetical experiment</strong>
+          <p>
+            These results use the policy lab’s assumptions. They cannot
+            authorize an active-service change.
+          </p>
+        </div>
+      )}
       <div className={`evidence-verdict ${trial.passed ? "passed" : "failed"}`}>
         {trial.passed ? <ShieldCheck size={22} /> : <X size={22} />}
         <div>
@@ -67,6 +77,23 @@ export function TrialEvidence({
           </button>
         ))}
       </div>
+      <button
+        className="text-button baseline-toggle"
+        aria-pressed={showBaseline}
+        onClick={() => setShowBaseline(!showBaseline)}
+      >
+        {showBaseline ? "Hide baseline output" : "Compare with baseline output"}
+        <ArrowRight size={13} />
+      </button>
+      {showBaseline && (
+        <div className="code-window baseline-window">
+          <div>
+            <span>Before repair · /exports/{customer}</span>
+            <span>HTTP {trial.before[customer].status}</span>
+          </div>
+          <pre>{JSON.stringify(trial.before[customer].body, null, 2)}</pre>
+        </div>
+      )}
       <div className="code-window">
         <div>
           <span>GET /exports/{customer}</span>
@@ -76,22 +103,27 @@ export function TrialEvidence({
         </div>
         <pre>{JSON.stringify(output.body, null, 2)}</pre>
       </div>
-      {trial.repair === "bypass" && customer === "alder" && (
-        <div className="callout warning">
-          <strong>
-            The response is healthy. The agreement is not satisfied.
-          </strong>
-          <p>
-            <code>provenance_id</code> is absent from the actual export.
-          </p>
-          <button
-            className="text-button"
-            onClick={() => onSource("alder-agreement")}
-          >
-            Read Alder's agreement <ArrowRight size={14} />
-          </button>
-        </div>
-      )}
+      {trial.repair === "bypass" &&
+        customer === "alder" &&
+        trial.checks.some(
+          (check) =>
+            check.customer === customer &&
+            check.key === "provenance" &&
+            !check.passed,
+        ) && (
+          <div className="callout warning">
+            <strong>Alder’s report is missing required provenance.</strong>
+            <p>
+              <code>provenance_id</code> is absent from the actual export.
+            </p>
+            <button
+              className="text-button"
+              onClick={() => onSource("alder-agreement")}
+            >
+              Read Alder's agreement <ArrowRight size={14} />
+            </button>
+          </div>
+        )}
       <h3>Checks for {titleCase(customer)}</h3>
       <div className="check-list">
         {trial.checks
@@ -158,11 +190,7 @@ export function ApprovalReview({
         <span className="review-icon">
           {done ? <CheckCircle2 size={28} /> : <ShieldCheck size={28} />}
         </span>
-        <h3>
-          {done
-            ? "The promised exports are restored."
-            : REPAIRS[proposal.repair].name}
-        </h3>
+        <h3>{done ? "Recovery verified" : REPAIRS[proposal.repair].name}</h3>
         <p>
           {done
             ? "The executed repair and its evidence are saved in the decision log."

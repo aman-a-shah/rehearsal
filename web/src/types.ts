@@ -1,7 +1,20 @@
 export type Repair = "rollback" | "bypass" | "cache";
 export type Person = "nia" | "mira" | "owen" | "reviewer";
-export type Page = "incident" | "context" | "decisions";
+export type Page = "incident" | "context" | "decisions" | "connections";
 export type Output = { status: number; body: Record<string, unknown> };
+export type RequestSpan = {
+  id: string;
+  parent_id: string | null;
+  customer: string;
+  service: string;
+  method: string;
+  path: string;
+  start_ms: number;
+  duration_ms: number;
+  status: number;
+  request: Record<string, unknown> | null;
+  response: Record<string, unknown>;
+};
 export type Source = {
   id: string;
   key: string;
@@ -30,6 +43,7 @@ export type Context = {
   }[];
 };
 export type Trial = {
+  hypothetical?: boolean;
   repair: Repair;
   passed: boolean;
   duration_ms: number;
@@ -37,6 +51,7 @@ export type Trial = {
   artifact_hash: string;
   exports: Record<string, Output>;
   before: Record<string, Output>;
+  trace?: { before: RequestSpan[]; after: RequestSpan[] };
   checks: {
     key: string;
     title: string;
@@ -86,7 +101,17 @@ export type Run = {
     message?: string;
   }[];
   receipt?: Receipt;
-  usage?: { input_tokens: number; output_tokens: number; model: string };
+  usage?: {
+    input_tokens: number;
+    output_tokens: number;
+    model: string;
+    cost_usd?: number | null;
+    turns?: number;
+    provider?: string;
+  };
+  thread_id?: string;
+  memory_retrieved?: number;
+  memory_sync?: "pending" | "saved" | "error";
 };
 export type Change = {
   id: string;
@@ -112,7 +137,15 @@ export type Workspace = {
   runs: Run[];
   decisions: Receipt[];
   changes: Change[];
-  provider: { available: boolean; name: string | null; model: string | null };
+  provider: {
+    available: boolean;
+    name: string | null;
+    model: string | null;
+    llm_provider?: string;
+    memory?: boolean;
+    assistant_connected?: boolean;
+    run_budget_usd?: number;
+  };
   trace: {
     query: string;
     parameters: unknown;
@@ -120,6 +153,37 @@ export type Workspace = {
     duration_ms: number;
     write: boolean;
   }[];
+};
+
+export type Simulation = {
+  hypothetical: true;
+  created_at: number;
+  context_hash: string;
+  assumptions: {
+    cache_max_age: number;
+    requires_provenance: boolean;
+    cache_age: number;
+  };
+  trials: Trial[];
+  eligible: Repair[];
+  recommendation: Repair | null;
+  duration_ms: number;
+};
+
+export type Sweep = {
+  hypothetical: true;
+  created_at: number;
+  context_hash: string;
+  cache_max_age: number;
+  ages: number[];
+  cases: Simulation[];
+  summary: {
+    scenarios: number;
+    trials: number;
+    checks: number;
+    eligible: Record<Repair, number>;
+  };
+  duration_ms: number;
 };
 
 export const PEOPLE: Record<
