@@ -23,6 +23,8 @@ from .engine import Engine
 from .workload import workload
 from .simulation import simulate, sweep
 from .security import Access, RequestLimits, ResourceBoundary
+from .repos.service import RepositoryService
+from .repos.routes import install_routes
 
 load_dotenv(override=False)
 
@@ -75,6 +77,7 @@ def create_app(engine=None, runner_factory=Runner):
     core = engine or Engine(Path(os.getenv("REHEARSAL_STATE_DIR", ".state")).resolve())
     mcp = make_mcp(core)
     runner = runner_factory(core, mcp)
+    repositories = RepositoryService(core.directory / "repositories", core.graph)
     sessions = {}
     session_lock = threading.Lock()
     access, limits = Access(), RequestLimits()
@@ -90,16 +93,21 @@ def create_app(engine=None, runner_factory=Runner):
     @asynccontextmanager
     async def lifespan(app):
         await asyncio.to_thread(core.start)
+        await repositories.start()
         async with mcp.session_manager.run():
             yield
+        await repositories.close()
         await runner.close()
         await asyncio.to_thread(core.graph.close)
 
     app = FastAPI(title="Rehearsal", version="0.2.0", lifespan=lifespan)
     app.state.engine, app.state.runner = core, runner
     app.state.access, app.state.limits = access, limits
+    app.state.repositories = repositories
+    install_routes(app, repositories)
+    frontend_host = urlparse(os.getenv("REHEARSAL_APP_ORIGIN", "")).hostname
     app.add_middleware(
-        TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"] + ([parsed_origin.hostname] if public_origin else [])
+        TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"] + ([parsed_origin.hostname] if public_origin else []) + ([frontend_host] if frontend_host else [])
     )
 
     @app.middleware("http")
@@ -124,6 +132,7 @@ def create_app(engine=None, runner_factory=Runner):
                 f"http://localhost:{os.getenv('REHEARSAL_WEB_PORT', '5180')}",
                 str(request.base_url).rstrip("/"),
                 public_origin,
+                os.getenv("REHEARSAL_APP_ORIGIN", "").rstrip("/"),
             }:
                 return JSONResponse(
                     {"message": "This request came from an unrecognized origin."}, 403

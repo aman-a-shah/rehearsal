@@ -151,6 +151,19 @@ class ResourceBoundary:
         self.app, self.access, self.limits = app, access, limits
 
     async def __call__(self, scope, receive, send):
+        # Bound snapshot decoding and graph construction, including GitHub downloads.
+        upload = scope.get("type") == "http" and scope.get("path") in {"/api/code/projects/upload", "/api/code/projects/import"}
+        keys = [(('repository-upload', '*'), 2)]
+        if upload and not self.limits.enter(keys):
+            return await JSONResponse({"code": "import_busy", "message": "Repository imports are busy. Try again shortly."}, 429,
+                                      headers={"Retry-After": "10", "Cache-Control": "no-store"})(scope, receive, send)
+        try:
+            return await self.handle(scope, receive, send)
+        finally:
+            if upload:
+                self.limits.leave(keys)
+
+    async def handle(self, scope, receive, send):
         if scope["type"] != "http":
             return await self.app(scope, receive, send)
         path = scope["path"]
@@ -173,6 +186,8 @@ class ResourceBoundary:
                 rules += [(('login', peer), 5, 300), (('login', '*'), 30, 300)]
             if path == "/api/connections/backboard":
                 rules += [(('connection', peer), 3, 60)]
+            if path in {"/api/code/projects/upload", "/api/code/projects/import"}:
+                rules += [(('repository-import', peer), 6, 60), (('repository-import', '*'), 20, 60)]
             if path.startswith("/api/simulations") or path.endswith("/evaluate"):
                 rules += [(('simulation', peer), 12, 60), (('simulation', '*'), 60, 60)]
                 slots = [(('simulation', '*'), 2)]
@@ -189,7 +204,7 @@ class ResourceBoundary:
                 if retry:
                     return await reject("rate_limited", "Too many requests. Wait before trying again.", 429, retry)
 
-            # Buffer at most 16 KiB, including chunked bodies without Content-Length.
+            # Bound chunked bodies too; only repository ZIP uploads permit large payloads.
             if scope["method"] in {"POST", "PUT", "PATCH", "DELETE"}:
                 parts, size = [], 0
                 try:
@@ -200,8 +215,9 @@ class ResourceBoundary:
                                 return
                             part = message.get("body", b"")
                             size += len(part)
-                            if size > 16384:
-                                return await reject("body_too_large", "Request bodies are limited to 16 KiB.", 413)
+                            body_limit = 12 * 1024 * 1024 if path == "/api/code/projects/upload" else 65536 if path.startswith("/api/code/") else 16384
+                            if size > body_limit:
+                                return await reject("body_too_large", "The request exceeds this endpoint's size limit.", 413)
                             parts.append(part)
                             if not message.get("more_body", False):
                                 break
