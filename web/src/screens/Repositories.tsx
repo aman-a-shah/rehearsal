@@ -14,6 +14,8 @@ import {
   Loader2,
   Play,
   RotateCw,
+  PanelRightClose,
+  PanelRightOpen,
   Square,
   Terminal,
   Upload,
@@ -24,9 +26,10 @@ import type {
   CodeRun,
   Execution,
   Project,
-  RepoGraph,
   RepoSession,
 } from "../repositoryTypes";
+
+import RepositoryGraph from "../components/RepositoryGraph";
 
 async function api<T>(
   path: string,
@@ -67,146 +70,6 @@ const label = (value: string) =>
     unstable: "Repeat check failed",
     testing: "Testing",
   })[value] || value;
-
-function DependencyGraph({
-  graph,
-  focus = [],
-  onFile,
-}: {
-  graph: RepoGraph;
-  focus?: string[];
-  onFile: (path: string) => void;
-}) {
-  const connected = new Set(graph.edges.flatMap((e) => [e.source, e.target]));
-  const nodes = graph.nodes
-    .filter((n) => n.kind !== "document")
-    .sort(
-      (a, b) =>
-        Number(focus.includes(b.path)) - Number(focus.includes(a.path)) ||
-        Number(connected.has(b.path)) - Number(connected.has(a.path)),
-    )
-    .slice(0, 18);
-  const targets = new Set(graph.edges.map((e) => e.target));
-  const columns = [
-    nodes.filter((n) => n.kind === "source" && targets.has(n.path)),
-    nodes.filter((n) => n.kind === "source" && !targets.has(n.path)),
-    nodes.filter((n) => n.kind === "test"),
-  ];
-  if (!columns[1].length && columns[0].length > 1)
-    columns[1].push(...columns[0].splice(Math.ceil(columns[0].length / 2)));
-  const positions = new Map<string, { x: number; y: number }>();
-  const height = Math.max(
-    230,
-    Math.max(...columns.map((c) => c.length)) * 60 + 85,
-  );
-  columns.forEach((column, index) =>
-    column.forEach((n, row) =>
-      positions.set(n.path, { x: 25 + index * 252, y: 60 + row * 60 }),
-    ),
-  );
-  return (
-    <div className="repo-map">
-      <svg
-        viewBox={`0 0 760 ${height}`}
-        role="group"
-        aria-label="Repository import graph. Lines connect files to their imported modules."
-      >
-        <defs>
-          <pattern
-            id="repo-dots"
-            width="20"
-            height="20"
-            patternUnits="userSpaceOnUse"
-          >
-            <circle cx="2" cy="2" r=".7" fill="#cfd7ce" />
-          </pattern>
-          <marker
-            id="repo-arrow"
-            markerWidth="6"
-            markerHeight="6"
-            refX="5"
-            refY="3"
-            orient="auto"
-          >
-            <path d="M0,0 L6,3 L0,6" fill="none" stroke="#98aa9d" />
-          </marker>
-        </defs>
-        <rect width="760" height={height} fill="url(#repo-dots)" />
-        {["Modules", "Dependents", "Tests"].map((title, i) => (
-          <text key={title} x={25 + 252 * i} y="28" className="repo-map-label">
-            {title}
-          </text>
-        ))}
-        {graph.edges.map((e, i) => {
-          const a = positions.get(e.source),
-            b = positions.get(e.target);
-          if (!a || !b) return null;
-          const fromX = a.x < b.x ? a.x + 205 : a.x;
-          const toX = a.x < b.x ? b.x : b.x + 205;
-          const direction = toX > fromX ? 1 : -1;
-          const routeY = Math.min(a.y, b.y) - 17;
-          const route =
-            Math.abs(a.x - b.x) > 300
-              ? `M${fromX},${a.y + 20} C${fromX + direction * 26},${a.y + 20} ${fromX + direction * 26},${routeY} ${fromX + direction * 52},${routeY} L${toX - direction * 52},${routeY} C${toX - direction * 26},${routeY} ${toX - direction * 26},${b.y + 20} ${toX},${b.y + 20}`
-              : `M${fromX},${a.y + 20} C${(fromX + toX) / 2},${a.y + 20} ${(fromX + toX) / 2},${b.y + 20} ${toX},${b.y + 20}`;
-          return (
-            <path
-              key={i}
-              d={route}
-              fill="none"
-              stroke="#a6b7aa"
-              strokeWidth="1.2"
-              markerEnd="url(#repo-arrow)"
-            />
-          );
-        })}
-        {nodes.map((n) => {
-          const p = positions.get(n.path)!;
-          return (
-            <g
-              key={n.path}
-              transform={`translate(${p.x} ${p.y})`}
-              className={`repo-map-node ${focus.includes(n.path) ? "focused" : ""}`}
-              role="button"
-              tabIndex={0}
-              aria-label={`Open ${n.path}`}
-              onClick={() => onFile(n.path)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onFile(n.path);
-                }
-              }}
-            >
-              <title>{n.path}</title>
-              <rect width="205" height="40" rx="5" />
-              <circle
-                cx="15"
-                cy="20"
-                r="3.2"
-                className={n.kind === "test" ? "test-dot" : "source-dot"}
-              />
-              <text x="27" y="24">
-                {n.path.length > 25 ? "…" + n.path.slice(-24) : n.path}
-              </text>
-            </g>
-          );
-        })}
-      </svg>
-      <div className="repo-map-caption">
-        <span>
-          <i className="source-dot" /> Source <i className="test-dot" /> Test
-        </span>
-        <span>
-          {graph.nodes.filter((n) => n.kind !== "document").length > 18
-            ? "Showing 18 files · "
-            : ""}
-          Arrow points to imported module
-        </span>
-      </div>
-    </div>
-  );
-}
 
 function Log({ execution, title }: { execution?: Execution; title: string }) {
   if (!execution)
@@ -284,7 +147,8 @@ export default function Repositories() {
   const [setup, setSetup] = useState("");
   const [test, setTest] = useState("");
   const [regression, setRegression] = useState(true);
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("graph");
+  const [incidentOpen, setIncidentOpen] = useState(true);
   const [candidateId, setCandidateId] = useState("");
   const [reviewed, setReviewed] = useState(false);
   const [file, setFile] = useState<{ path: string; content: string } | null>(
@@ -342,7 +206,8 @@ export default function Repositories() {
     setIncident(project.incident || "");
     setSetup(project.setup_command);
     setTest(project.test_command);
-    setTab("overview");
+    setTab("graph");
+    setIncidentOpen(true);
     setRunId("");
     setCandidateId("");
     setReviewed(false);
@@ -360,6 +225,13 @@ export default function Repositories() {
     if (file) sourceRef.current?.showModal();
     else sourceRef.current?.close();
   }, [file]);
+
+  useEffect(() => {
+    if (run?.status === "review") {
+      setTab((current) => (current === "activity" ? "overview" : current));
+      setIncidentOpen(false);
+    }
+  }, [run?.status]);
 
   async function act(name: string, operation: () => Promise<void>) {
     if (busy) return;
@@ -531,6 +403,16 @@ export default function Repositories() {
                 dependencies, reproduces the failure, and tests a patch before
                 you review it.
               </p>
+              <button
+                className="repo-example-jump"
+                onClick={() =>
+                  document
+                    .getElementById("repo-examples")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                }
+              >
+                Try an example project <ArrowRight size={15} />
+              </button>
               <div className="repo-home-steps">
                 <span>01 Import</span>
                 <i />
@@ -733,46 +615,91 @@ export default function Repositories() {
               ))}
             </section>
           )}
-          <section className="repo-starters">
+          <section className="repo-starters" id="repo-examples">
             <div>
               <div className="repo-section-kicker">See a complete repair</div>
-              <h2>Start with a small, real bug.</h2>
+              <h2>Follow a bug across a real service.</h2>
               <p>
-                Reproduce a failing test or uncover a missing regression.
-                These are real codebases; fixes are generated when you run them.
+                Explore checkout, refunds, event feeds, and their tests. Import
+                an example with one click; Rehearsal generates the fix when you
+                run it.
               </p>
             </div>
             <div>
-              {session.examples.map((example, index) => (
-                <button
-                  key={example.id}
-                  disabled={!!busy}
-                  onClick={() =>
-                    void act(example.id, async () => {
-                      await ensureSession();
-                      await imported(
-                        await api<Project>("/examples/" + example.id, {}),
-                      );
-                    })
-                  }
-                >
-                  <span className="repo-starter-number">0{index + 1}</span>
-                  <span>
-                    <small>
-                      {example.runtime === "python"
-                        ? "Python · unittest"
-                        : "Node.js · node:test"}
-                    </small>
-                    <strong>{example.name.split(" / ")[1]}</strong>
-                    <p>{example.description}</p>
-                  </span>
-                  {busy === example.id ? (
-                    <Loader2 className="spin" size={17} />
-                  ) : (
-                    <ArrowRight size={17} />
-                  )}
-                </button>
-              ))}
+              {session.examples
+                .filter((example) => example.featured)
+                .map((example, index) => (
+                  <button
+                    key={example.id}
+                    disabled={!!busy}
+                    onClick={() =>
+                      void act(example.id, async () => {
+                        await ensureSession();
+                        await imported(
+                          await api<Project>("/examples/" + example.id, {}),
+                        );
+                      })
+                    }
+                  >
+                    <span className="repo-starter-number">0{index + 1}</span>
+                    <span>
+                      <small>
+                        {example.runtime === "python"
+                          ? "Python · unittest"
+                          : "Node.js · node:test"}{" "}
+                        · {example.file_count} files
+                      </small>
+                      <strong>{example.name.split(" / ")[1]}</strong>
+                      <p>{example.description}</p>
+                      <small className="repo-starter-challenge">
+                        {example.challenge}
+                      </small>
+                    </span>
+                    {busy === example.id ? (
+                      <Loader2 className="spin" size={17} />
+                    ) : (
+                      <ArrowRight size={17} />
+                    )}
+                  </button>
+                ))}
+              <details className="repo-quick-examples">
+                <summary>
+                  Prefer a quick introduction? <span>3 smaller examples</span>
+                  <ChevronDown size={13} />
+                </summary>
+                {session.examples
+                  .filter((example) => !example.featured)
+                  .map((example) => (
+                    <button
+                      key={example.id}
+                      disabled={!!busy}
+                      onClick={() =>
+                        void act(example.id, async () => {
+                          await ensureSession();
+                          await imported(
+                            await api<Project>("/examples/" + example.id, {}),
+                          );
+                        })
+                      }
+                    >
+                      <span>
+                        <small>
+                          {example.runtime === "python"
+                            ? "Python · unittest"
+                            : "Node.js · node:test"}{" "}
+                          · {example.file_count} files
+                        </small>
+                        <strong>{example.name.split(" / ")[1]}</strong>
+                        <p>{example.description}</p>
+                      </span>
+                      {busy === example.id ? (
+                        <Loader2 className="spin" size={15} />
+                      ) : (
+                        <ArrowRight size={15} />
+                      )}
+                    </button>
+                  ))}
+              </details>
             </div>
           </section>
           <footer className="repo-home-footer">
@@ -834,54 +761,36 @@ export default function Repositories() {
               </button>
             </div>
           </div>
-          <div className="repo-workspace-grid">
-            <aside className="repo-run-list">
-              <div className="repo-section-heading">
-                <h2>Rehearsals</h2>
-                <span>{projectRuns.length}</span>
-              </div>
-              {projectRuns.length ? (
-                projectRuns.map((r, i) => (
-                  <button
-                    key={r.id}
-                    className={r.id === run?.id ? "selected" : ""}
-                    onClick={() => {
-                      setRunId(r.id);
-                      setCandidateId("");
-                      setReviewed(false);
-                    }}
-                  >
-                    <span className="repo-run-index">
-                      {String(projectRuns.length - i).padStart(2, "0")}
-                    </span>
-                    <span>
-                      <strong>
-                        {r.incident.slice(0, 50)}
-                        {r.incident.length > 50 ? "…" : ""}
-                      </strong>
-                      <small>{label(r.status)}</small>
-                    </span>
-                  </button>
-                ))
-              ) : (
-                <p className="repo-sidebar-empty">
-                  Your investigation and its evidence will be saved here.
-                </p>
+          <div className="repo-workspace-toolbar">
+            <div className="repo-snapshot-stats">
+              <span>
+                <b>{project.file_count}</b> files
+              </span>
+              <span>
+                <b>{project.graph.edges.length}</b> imports
+              </span>
+              <span>
+                <b>{project.test_count}</b> test files
+              </span>
+            </div>
+            <div className="repo-workspace-tools">
+              {projectRuns.length > 0 && (
+                <select
+                  aria-label="Rehearsal history"
+                  value={run?.id || ""}
+                  onChange={(event) => {
+                    setRunId(event.target.value);
+                    setCandidateId("");
+                    setReviewed(false);
+                  }}
+                >
+                  {projectRuns.map((r, i) => (
+                    <option key={r.id} value={r.id}>
+                      Run {projectRuns.length - i} · {label(r.status)}
+                    </option>
+                  ))}
+                </select>
               )}
-              <div className="repo-sidebar-summary">
-                <span>
-                  {project.file_count}
-                  <small>files indexed</small>
-                </span>
-                <span>
-                  {project.test_count}
-                  <small>test files</small>
-                </span>
-                <span>
-                  {project.graph.edges.length}
-                  <small>import relationships</small>
-                </span>
-              </div>
               <details className="repo-settings">
                 <summary>Repository settings</summary>
                 <p>{project.skipped.length} files excluded during import.</p>
@@ -926,47 +835,77 @@ export default function Repositories() {
                   </div>
                 )}
               </details>
-            </aside>
+              <button
+                className="repo-button"
+                aria-expanded={incidentOpen}
+                aria-controls="repo-incident-panel"
+                onClick={() => setIncidentOpen(!incidentOpen)}
+              >
+                {incidentOpen ? (
+                  <PanelRightClose size={15} />
+                ) : (
+                  <PanelRightOpen size={15} />
+                )}
+                {incidentOpen ? "Hide incident" : "Edit incident"}
+              </button>
+            </div>
+          </div>
+          <div
+            className={`repo-workspace-grid ${incidentOpen ? "" : "incident-collapsed"}`}
+          >
             <div className="repo-investigation">
-              <section className="repo-graph-panel">
-                <div className="repo-panel-title">
-                  <div>
-                    <GitBranch size={15} />
-                    <h2>Connected code</h2>
-                  </div>
-                  <span>FalkorDB · {project.graph.symbols.length} symbols</span>
-                </div>
-                <DependencyGraph
-                  graph={project.graph}
-                  focus={run?.context?.seeds}
-                  onFile={(path) => void openFile(path)}
-                />
-                <p className="repo-graph-disclaimer">{project.graph.limits}</p>
-              </section>
               <nav className="repo-tabs" aria-label="Investigation views">
-                {[
-                  "overview",
-                  "patch",
-                  "tests",
-                  "activity",
-                  "graph queries",
-                ].map((t) => (
-                  <button
-                    key={t}
-                    className={tab === t ? "selected" : ""}
-                    aria-current={tab === t ? "page" : undefined}
-                    onClick={() => setTab(t)}
-                  >
-                    {t === "graph queries"
-                      ? "Graph evidence"
-                      : t[0].toUpperCase() + t.slice(1)}
-                    {t === "patch" && !!run?.candidates.length && (
-                      <span>{run.candidates.length}</span>
-                    )}
-                  </button>
-                ))}
+                {["graph", "overview", "patch", "tests", "activity"].map(
+                  (t) => (
+                    <button
+                      key={t}
+                      className={tab === t ? "selected" : ""}
+                      aria-current={tab === t ? "page" : undefined}
+                      onClick={() => setTab(t)}
+                    >
+                      {t === "graph"
+                        ? "Graph evidence"
+                        : t[0].toUpperCase() + t.slice(1)}
+                      {t === "patch" && !!run?.candidates.length && (
+                        <span>{run.candidates.length}</span>
+                      )}
+                    </button>
+                  ),
+                )}
               </nav>
               <section className="repo-evidence">
+                {tab !== "graph" && run?.baseline && (
+                  <div className="repo-test-progress" aria-label="Test results">
+                    {[
+                      {
+                        title: "Original",
+                        result: run.reproduction || run.baseline,
+                      },
+                      { title: "With patch", result: candidate?.trial },
+                      {
+                        title: "Fresh repeat",
+                        result: candidate?.verification,
+                      },
+                    ].map((step) => (
+                      <div key={step.title}>
+                        <span>{step.title}</span>
+                        <strong
+                          className={
+                            step.result
+                              ? step.result.exit_code === 0
+                                ? "repo-good"
+                                : "repo-bad"
+                              : ""
+                          }
+                        >
+                          {step.result
+                            ? `${step.result.exit_code === 0 ? "Passed" : "Failed"} · ${step.result.test_count ?? "—"} tests`
+                            : "Pending"}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 {tab === "overview" &&
                   (!run ? (
                     <div className="repo-before-run">
@@ -1080,6 +1019,22 @@ export default function Repositories() {
                         ))}
                       </div>
                       <div className="repo-patch-intro">
+                        <div className="repo-patch-heading">
+                          <span className="repo-section-kicker">
+                            Proposed fix ·{" "}
+                            {Object.keys(candidate.changes || {}).length}{" "}
+                            changed files · not applied
+                          </span>
+                          {candidate.status === "verified" && (
+                            <a
+                              className="repo-button primary"
+                              href={`/api/code/runs/${run.id}/patch/${candidate.id}`}
+                              download
+                            >
+                              <ArrowDownToLine size={14} /> Download patch
+                            </a>
+                          )}
+                        </div>
                         <h2>{candidate.title}</h2>
                         <p>{candidate.reason || candidate.message}</p>
                         {candidate.message && candidate.reason && (
@@ -1182,53 +1137,84 @@ export default function Repositories() {
                     )}
                   </div>
                 )}
-                {tab === "graph queries" && (
-                  <div className="repo-queries">
-                    <div className="repo-evidence-intro">
-                      <h2>The graph selects the investigation context.</h2>
-                      <p>
-                        FalkorDB traverses imports from the reported failure,
-                        finds dependent tests, and resolves ownership. Only
-                        connected source files are eligible for generated edits.
-                      </p>
+                {tab === "graph" && (
+                  <>
+                    <div className="repo-graph-intro">
+                      <div>
+                        <h2>
+                          {run?.context
+                            ? "The evidence behind the repair"
+                            : "Explore the code before it runs"}
+                        </h2>
+                        <p>
+                          {run?.context
+                            ? `${run.context.seeds.length} starting files → ${run.context.files.length} files in context → ${run.context.editable.length} eligible for edits. ${run.context.affected_tests.length} connected test files.`
+                            : "Select a file to see its imports, dependents, owners, and source. Run a rehearsal to follow the investigation."}
+                        </p>
+                      </div>
+                      <span>
+                        <GitBranch size={13} /> FalkorDB
+                      </span>
                     </div>
-                    {run?.context ? (
-                      <>
-                        {run.context.queries.map((q, i) => (
-                          <section key={i}>
-                            <div>
-                              <strong>Query {i + 1}</strong>
-                              <span>
-                                {q.rows} rows · {q.duration_ms} ms
-                              </span>
-                            </div>
-                            <pre>{q.query}</pre>
-                          </section>
-                        ))}
-                        <h3>Editable files returned by the graph</h3>
-                        {run.context.editable.map((path) => (
-                          <button
-                            key={path}
-                            onClick={() => void openFile(path)}
-                          >
-                            <FileCode2 size={13} />
-                            {path}
-                          </button>
-                        ))}
-                      </>
-                    ) : (
-                      <p className="repo-empty-small">
-                        Executed queries and selected files will appear during
-                        the rehearsal.
+                    <RepositoryGraph
+                      key={project.id}
+                      graph={project.graph}
+                      context={run?.context}
+                      changed={Object.keys(candidate?.changes || {})}
+                      onFile={(path) => void openFile(path)}
+                    />
+                    <details className="repo-graph-method">
+                      <summary>
+                        How this graph guides the repair{" "}
+                        {run?.context && (
+                          <span>
+                            {run.context.queries.length} executed queries
+                          </span>
+                        )}
+                      </summary>
+                      <p>
+                        FalkorDB follows imports from failure-related files,
+                        finds dependent tests, and resolves owners. Its results
+                        define the source the model can inspect and edit. Arrows
+                        represent static imports; they do not assert runtime
+                        coverage. The full configured test suite still runs.
                       </p>
-                    )}
-                  </div>
+                      {run?.context ? (
+                        <div className="repo-queries">
+                          {run.context.queries.map((q, i) => (
+                            <section key={i}>
+                              <div>
+                                <strong>Query {i + 1}</strong>
+                                <span>
+                                  {q.rows} rows · {q.duration_ms} ms
+                                </span>
+                              </div>
+                              <pre>{q.query}</pre>
+                            </section>
+                          ))}
+                        </div>
+                      ) : (
+                        <p>
+                          Executed queries will appear here when the
+                          investigation starts.
+                        </p>
+                      )}
+                    </details>
+                  </>
                 )}
               </section>
             </div>
-            <aside className="repo-incident-form">
-              <div className="repo-section-kicker">New investigation</div>
-              <h2>What’s going wrong?</h2>
+            <aside
+              className="repo-incident-form"
+              id="repo-incident-panel"
+              hidden={!incidentOpen}
+            >
+              <div className="repo-section-kicker">Incident brief</div>
+              <h2>
+                {project.source === "example"
+                  ? "Ready to rehearse"
+                  : "What’s going wrong?"}
+              </h2>
               <form
                 onSubmit={(e) => {
                   e.preventDefault();
@@ -1246,45 +1232,50 @@ export default function Repositories() {
                   minLength={15}
                   maxLength={12000}
                   required
-                  rows={7}
+                  rows={9}
                 />
-                <label htmlFor="setup-command">
-                  Setup command <span>Optional</span>
-                </label>
-                <textarea
-                  id="setup-command"
-                  rows={2}
-                  value={setup}
-                  onChange={(e) => setSetup(e.target.value)}
-                  maxLength={1500}
-                  placeholder="No dependencies to install"
-                  className="repo-command-input"
-                />
-                <label htmlFor="test-command">Test command</label>
-                <textarea
-                  id="test-command"
-                  rows={2}
-                  value={test}
-                  onChange={(e) => setTest(e.target.value)}
-                  maxLength={1500}
-                  required
-                  className="repo-command-input"
-                />
-                <p className="repo-command-help">
-                  Runs in <code>{project.directory || "/"}</code>. Review
-                  commands before starting.
-                </p>
-                <label className="repo-checkbox">
-                  <input
-                    type="checkbox"
-                    checked={regression}
-                    onChange={(e) => setRegression(e.target.checked)}
+                <details className="repo-run-options">
+                  <summary>
+                    Test commands & options <ChevronDown size={13} />
+                  </summary>
+                  <label htmlFor="setup-command">
+                    Setup command <span>Optional</span>
+                  </label>
+                  <textarea
+                    id="setup-command"
+                    rows={2}
+                    value={setup}
+                    onChange={(e) => setSetup(e.target.value)}
+                    maxLength={1500}
+                    placeholder="No dependencies to install"
+                    className="repo-command-input"
                   />
-                  <span>
-                    If existing tests pass, add a regression test to reproduce
-                    this bug.
-                  </span>
-                </label>
+                  <label htmlFor="test-command">Test command</label>
+                  <textarea
+                    id="test-command"
+                    rows={2}
+                    value={test}
+                    onChange={(e) => setTest(e.target.value)}
+                    maxLength={1500}
+                    required
+                    className="repo-command-input"
+                  />
+                  <p className="repo-command-help">
+                    Runs in <code>{project.directory || "/"}</code>. Review
+                    commands before starting.
+                  </p>
+                  <label className="repo-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={regression}
+                      onChange={(e) => setRegression(e.target.checked)}
+                    />
+                    <span>
+                      If existing tests pass, add a regression test to reproduce
+                      this bug.
+                    </span>
+                  </label>
+                </details>
                 <button
                   className="repo-button primary"
                   type="submit"

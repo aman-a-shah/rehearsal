@@ -1,6 +1,30 @@
 """Small, real codebases with ordinary tests. Repairs are generated, never preloaded."""
 
+from pathlib import Path
+
+
+def fixture(name):
+    root = Path(__file__).parent / "fixtures" / name
+    return {path.relative_to(root).as_posix(): path.read_text()
+            for path in sorted(root.rglob("*"))
+            if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc"}
+
+
 EXAMPLES = {
+    "python-orders": {
+        "name": "Harbor / order-service", "runtime": "python", "featured": True,
+        "description": "Trace lost discount cents through checkout, refunds, and the accounting ledger.",
+        "challenge": "Exact allocation · multi-layer failures",
+        "incident": "A one-cent coupon on three equal $1 lines is charged as $3.00 instead of $2.99. A two-cent coupon sometimes discounts three cents. Refunds for separate lines no longer add up to the expected charge, and the ledger fails reconciliation. Trace this across the order service and fix the root cause. Allocate integer discount cents proportionally to each line's subtotal using largest fractional remainders; ties use ascending line ID so reordering the cart cannot change refunds. Preserve tax-after-discount, zero-value lines, validation, and existing API behavior.",
+        "files": fixture("order-service"),
+    },
+    "node-events": {
+        "name": "Atlas / event-service", "runtime": "node", "featured": True,
+        "description": "Repair cursor continuation and 64-bit ordering across feeds, exports, and credit replay.",
+        "challenge": "Composite cursors · precision · tenant isolation",
+        "incident": "After a batch ingest, several events share a timestamp. The next feed page repeats prior events, exports report that the cursor stopped advancing, and credit replay fails. Decimal-string IDs above 9007199254740991 sometimes come back in the wrong order too. The service orders by occurredAt ascending, then exact numeric ID ascending, and a cursor must be strictly exclusive on that composite position. Fix the root causes across the query path. Preserve tenant isolation, cursor scope validation, kind filters, retention, non-mutation of input, and existing limit validation.",
+        "files": fixture("event-service"),
+    },
     "python-pricing": {
         "name": "Harbor / pricing-service", "runtime": "python",
         "description": "A discount rounds too early and overcharges small orders.",

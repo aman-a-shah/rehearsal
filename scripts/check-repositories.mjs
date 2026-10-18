@@ -29,25 +29,33 @@ try {
   });
   console.log("Home screen loaded.");
   await page
-    .getByRole("button", { name: /Python · unittest.*pricing-service/ })
+    .getByRole("button", { name: /Python · unittest.*order-service/ })
     .click();
   await page
-    .getByRole("heading", { name: "Harbor / pricing-service" })
+    .getByRole("heading", { name: "Harbor / order-service" })
     .waitFor({ timeout: 30000 });
   assert.match(
     await page.locator("#incident-description").inputValue(),
-    /round/i,
+    /coupon/i,
   );
   assert.match(await page.locator("#test-command").inputValue(), /unittest/);
+  assert.equal(await page.locator(".repo-graph-file").count(), 28);
+  await page.getByRole("button", { name: "Expand graph", exact: true }).click();
+  await page.getByRole("button", { name: "Fit graph to view" }).click();
+  await page.keyboard.press("Escape");
   await page.screenshot({
     path: new URL("workspace.png", output).pathname,
     fullPage: true,
   });
   await page
-    .getByRole("button", { name: "Open pricing.py", exact: true })
+    .getByRole("button", {
+      name: "Inspect discounts.py commerce (commerce/discounts.py)",
+      exact: true,
+    })
     .click();
+  await page.getByRole("button", { name: "View source", exact: true }).click();
   await page.getByRole("dialog").waitFor();
-  assert.match(await page.getByRole("dialog").innerText(), /discounted_total/);
+  assert.match(await page.getByRole("dialog").innerText(), /allocate_discount/);
   await page.getByRole("button", { name: "Close file", exact: true }).click();
   console.log(
     "Imported code, graph, source inspection, and run commands verified.",
@@ -70,6 +78,7 @@ try {
     }
     assert.equal(run?.status, "review", run?.message || "Run did not finish");
     assert.equal(run.baseline.exit_code, 1);
+    assert.equal(run.baseline.test_count, 46);
     const chosen = run.candidates.find((c) => c.id === run.recommended);
     assert.equal(chosen.status, "verified");
     assert.equal(chosen.trial.exit_code, 0);
@@ -86,7 +95,7 @@ try {
     });
     const download = await Promise.all([
       page.waitForEvent("download"),
-      page.getByRole("link", { name: "Download patch" }).click(),
+      page.getByRole("link", { name: "Download patch" }).first().click(),
     ]);
     await download[0].saveAs(new URL("verified.patch", output).pathname);
     await page.getByRole("button", { name: "Tests", exact: true }).click();

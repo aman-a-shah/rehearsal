@@ -104,21 +104,7 @@ export default function DemoGate({ children }: { children: ReactNode }) {
     };
   }, [connect]);
 
-  if (access?.authorized && !access.expired && !loading)
-    return (
-      <>
-        {access.temporary && (
-          <aside className="repo-demo-notice">
-            <strong>Temporary judge demo</strong>
-            <span>
-              Download your patch before leaving. Workspaces reset when the demo
-              sleeps.
-            </span>
-          </aside>
-        )}
-        {children}
-      </>
-    );
+  if (access?.authorized && !access.expired && !loading) return <>{children}</>;
 
   return (
     <main className="repo-demo-gate">

@@ -4,7 +4,7 @@ Import a GitHub repository or upload a ZIP, describe a bug, and review a patch t
 
 <p align="center">
   <a href="docs/screenshots/repository-repair.png">
-    <img src="docs/screenshots/repository-repair.png" width="900" alt="A live repository rehearsal: the graph connects pricing, checkout, and tests; a generated patch corrects early rounding and passes six tests in two fresh sandboxes.">
+    <img src="docs/screenshots/repository-repair.png" width="900" alt="A live order-service rehearsal: the graph connects 28 code and test files and highlights the generated discount-allocation repair.">
   </a>
 </p>
 
@@ -16,7 +16,16 @@ Import a GitHub repository or upload a ZIP, describe a bug, and review a patch t
 4. Inspect candidate diffs, executed graph queries, the original failure, and passing test logs. The selected patch must pass a second fresh sandbox run without reducing the reported test count.
 5. Download the patch or approve a draft pull request. Publishing requires GitHub write access and rechecks that the base branch still matches the tested commit. Rehearsal does not merge or deploy changes to your application.
 
-Three included starters cover Python rounding, Node.js pagination, and a Python timeout bug that needs a new regression test. Their repairs are generated at runtime. The earlier [guided operational incident](docs/guided-workspace.md), including its diagrams and policy examples, remains available from **Guided example**.
+Two complete example services require no upload or GitHub account:
+
+| Example | Indexed files / imports | Reproduced failure | Observed verified repair |
+| --- | --- | --- | --- |
+| Harbor order service · Python | 30 / 38 | Discount rounding breaks checkout, refunds, and ledger reconciliation | One source file; all 46 tests pass twice |
+| Atlas event service · Node.js | 28 / 32 | Tied timestamps and imprecise IDs break feeds, exports, and credit replay | Two source files; all 37 tests pass twice |
+
+**Graph evidence** provides a searchable, zoomable dependency map with investigation context, changed files, ownership, and executed queries. **Patch** shows the proposed code fix; **Tests** shows the original failure, candidate execution, and fresh repeat. The incident panel collapses to give these views the full workspace.
+
+Three smaller starters cover rounding, pagination, and a timeout bug that needs a new regression test. All example repairs are generated at runtime. The earlier [guided operational incident](docs/guided-workspace.md), including its diagrams and policy examples, remains available from **Guided example**.
 
 You can also import the public [Python pricing repository](https://github.com/aman-a-shah/rehearsal-python-example) or [Node event-feed repository](https://github.com/aman-a-shah/rehearsal-node-example). Their default branches intentionally retain the bugs. Real cloud-verified repairs are available as draft PRs: [Python](https://github.com/aman-a-shah/rehearsal-python-example/pull/1), [Node](https://github.com/aman-a-shah/rehearsal-node-example/pull/1).
 

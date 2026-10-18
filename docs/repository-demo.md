@@ -1,39 +1,40 @@
-# Record a real repository repair
+# Record a repository repair
 
-For the temporary judge link, open the invitation first. Start with **Harbor / pricing-service**, then show a public GitHub import or ZIP upload. **Atlas / event-feed** exercises Node.js; **Relay / timeout-service** starts with passing tests and requires a generated failing regression. Download the patch before leaving because the free host clears workspaces when it sleeps. GitHub sign-in is optional for this preview.
+Open the private invitation link and choose **Harbor / order-service** under the example projects. It imports a runnable Python service: 30 files, 38 import relationships, and 46 tests. The incident and test command are already filled in. No upload or GitHub sign-in is needed.
 
-Use the Python pricing repository for the main demonstration. Its bug is visible in one assertion, while its graph also shows the checkout module and dependent tests. Keep a second tab open on the repository.
+## What the example demonstrates
 
-## Before recording
+A fixed coupon is split across an order's lines. Independently rounding each share loses or creates cents. The effect appears in checkout totals, partial refunds, receipts, and the accounting ledger. One root-cause repair can correct those failures across the service.
 
-Open the private invitation and import `https://github.com/aman-a-shah/rehearsal-python-example` on `main`. No GitHub sign-in is needed. Confirm the sandbox and provider are connected. The test command is `python -m unittest discover -s tests -v`; no setup command is needed. Use an OAuth-configured deployment only if recording draft PR publication as well.
+The graph makes those connections inspectable. In the verified run, FalkorDB selected 26 files, including eight dependent test files, and allowed edits to 18 source files. The model changed only `commerce/discounts.py`. Nine failing tests became 46 passing tests, then the same 46 passed in a second fresh Vercel sandbox. This is an observed run; later model proposals can differ.
 
-Use this incident description:
+## Screen and voice sequence
 
-> Customers are overcharged for small orders. discounted_total should round the final discounted subtotal once to the nearest cent using ROUND_HALF_UP. Three items at $0.05 with a 10% discount should cost $0.14, but the service returns $0.15. Preserve validation of negative quantities and invalid discounts.
-
-Perform one rehearsal before recording to verify account readiness and familiarize yourself with the output. Model wording and candidate count vary. Recording an already completed run is fine if you say that you are showing its saved execution evidence. Do not disguise prerecorded output as a new live run. Deleting a repository does not refund usage. The free host resets all workspace state when it sleeps; record and download the patch before leaving.
-
-## A concise screen-and-voice sequence
-
-| Screen | What to show | Suggested narration |
+| Screen | Show | Explain |
 | --- | --- | --- |
-| GitHub source and failing test | `pricing.py` and the small-order assertion | “This service overcharges a small order because it rounds each item's discount before multiplying the quantity.” |
-| Import and incident | Repository URL, pinned commit, test command, incident text | “I import the real repository and describe the failure. Rehearsal saves this exact commit and runs its existing tests in an isolated sandbox.” |
-| Graph | Open `pricing.py`; trace its imports and dependents to checkout and both test modules | “FalkorDB maps source files, imports, symbols, and owners. These graph queries determine the source context the agent receives and where it is allowed to propose changes.” |
-| Original test evidence | Six tests, one failing assertion, `$0.15` versus `$0.14` | “The first run reproduces the bug. This is output from executing the repository, not a predicted score.” |
-| Generated patch | Diff moves rounding to the final subtotal | “The model proposes a source change. Existing tests and build configuration are protected. Each candidate runs from a fresh snapshot.” |
-| Passing tests and repeat | Six passing tests, then the separate verification run | “This patch passes all six checks, and Rehearsal repeats them in another fresh sandbox. Passing tests are evidence for these checks; I still review the change.” |
-| Review and download | Read the diff, download the patch, show the local application command | “I review the patch and download it to apply to the tested commit. The original repository is unchanged.” |
+| Example projects | Open `order-service`; the source indexes without an upload | “This is a working order service with checkout, coupons, refunds, accounting, and tests.” |
+| Incident brief | The one-cent coupon that produces a $3.00 charge instead of $2.99 | “The symptom appears in several places. I describe the expected behavior and keep the existing tests intact.” |
+| Graph evidence | Fit the graph; select `commerce/discounts.py`; inspect imports, dependents, owner, and source | “FalkorDB follows the dependency relationships to select the investigation context and permitted edit scope.” |
+| Run rehearsal | Click Run; show baseline, graph traversal, generation, testing, and repeat verification in Activity | “Rehearsal executes the original suite before it proposes a repair. The model works from the actual failure output and connected source.” |
+| Tests | Original failure, candidate test output, and independent repeat | “The original suite has nine failures. The proposed repair passes all 46 tests, then passes again in a fresh sandbox.” Use the counts actually shown by your run. |
+| Patch | Review the allocation algorithm and changed-file count; collapse the incident panel for more space | “The patch allocates whole cents first, then distributes the remainder deterministically. The tests, tax logic, and public API stay intact.” Describe the actual generated diff. |
+| Graph evidence | Highlight patched source and compare All files with Investigation; expand the executed queries | “The patch changes this source file. Its dependents explain why checkout and refund tests matter, and these are the queries that selected that context.” |
+| Download | Download the verified patch and show the application command | “This is a proposed source change. I review it before applying it to my repository.” |
 
-On a deployment with GitHub OAuth configured, optionally show the review checkbox, draft PR, and its base commit. Explain that publication rechecks the branch and never merges automatically. The free judge preview uses patch downloads.
+The Patch tab is the actual generated unified diff. Green lines are additions; red lines are removals. Nothing is applied to the user's repository automatically. Verified means the configured tests passed in two fresh sandboxes, not that every possible production behavior is proven correct.
 
-Let the actual execution determine timing. If a run takes longer than the video allows, cut the waiting period and label the cut. Keep the failure, graph query, diff, and both real test results visible long enough to read.
+Run one rehearsal before recording to check readiness. Showing saved evidence is fine if you describe it as a completed run. If you cut waiting time, label the cut. Keep the real failure, graph, patch, and passing output readable. Free-host workspaces reset when the service sleeps; download the patch and finish the recording before leaving.
 
-## Optional second case
+## Second substantial example
 
-The Node repository has a duplicate pagination boundary. `pageAfter` uses `>=` where the cursor must be exclusive. Its five `node:test` cases demonstrate a different language and test runner using the same workflow.
+**Atlas / event-service** has 28 files, 32 import relationships, and 37 tests. Tied timestamps break cursor continuation, and conversion of decimal-string IDs to JavaScript numbers loses precision. The symptoms reach the feed, paginated exports, and credit replay.
 
-For a bug missing from existing tests, choose **Relay / timeout-service**: four tests initially pass; a new regression must expose that integer zero is treated as a missing timeout; the repair must pass the expanded suite twice. The generated test count can vary. This demonstrates why the system requires a failing regression before accepting a fix.
+The verified repair changed two source files: exact ID comparison in `src/domain/order.js`, and exclusive composite-cursor filtering in `src/query/window.js`. Eight failing tests became 37 passing tests, followed by a successful fresh repeat. Existing tenant isolation, cursor scope, validation, filters, retention, and input non-mutation tests remained intact.
 
-Supported repositories are bounded Python and Node.js/TypeScript projects with self-contained tests. Explain those limits directly. The project investigates code and produces reviewed patches; it does not connect to arbitrary production infrastructure or guarantee incident resolution.
+## Other entry points
+
+The three short examples remain under **Prefer a quick introduction?**: pricing rounding, pagination, and a timeout case whose existing tests pass. The timeout example requires a new failing regression before a repair can qualify.
+
+To show a public import, use `https://github.com/aman-a-shah/rehearsal-python-example` or `https://github.com/aman-a-shah/rehearsal-node-example`. To show private source without OAuth, upload a ZIP. Supported projects use Python or Node.js/TypeScript with self-contained tests. Production services or secret-dependent tests need their own runner configuration.
+
+The judge deployment supports patch downloads. On an OAuth-configured deployment, an authorized user can review the patch and open a draft PR; publication rechecks the branch and does not merge automatically.

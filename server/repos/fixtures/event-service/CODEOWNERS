@@ -1,0 +1,6 @@
+src/domain/ @data-platform
+src/query/ @data-platform
+src/services/ @integrations
+src/http/ @api
+src/storage/ @storage
+test/ @quality

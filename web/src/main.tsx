@@ -12,6 +12,7 @@ import "./styles.css";
 import "./studio.css";
 import "./examples.css";
 import "./repositories.css";
+import "./repositoryWorkspace.css";
 
 function Root() {
   const [hash, setHash] = React.useState(window.location.hash);

@@ -1,5 +1,19 @@
 # Verification record
 
+## Substantial examples and repository workbench — October 18
+
+Both new examples were repaired through the actual local API, FalkorDB context selection, Backboard model generation, and Vercel microVM execution. Source fixes were generated during the run; the app includes no precomputed repairs.
+
+| Example | Graph | Original suite | Generated change | Fresh verification |
+| --- | --- | --- | --- | --- |
+| Harbor order service | 30 indexed files, 28 code/test files, 38 imports | 46 tests, 9 failures | One file: proportional discount allocation with deterministic remainder handling | All 46 tests pass twice |
+| Atlas event service | 28 indexed files, 25 code/test files, 32 imports | 37 tests, 8 failures | Two files: exact integer-ID ordering and exclusive composite-cursor continuation | All 37 tests pass twice |
+
+Run IDs: `c31e50fe41844639b78dbb0b8f65a6d0` and `ddde7119718b4b979bb71782a67a2d25`. The order investigation selected 26 context files and eight dependent test files; the event investigation selected 23 context files and seven dependent test files. Existing tests were unchanged. These results establish the observed examples, not success on every repository.
+
+The focused repository suite, including four new fixture/graph checks, passed **61 tests**. The invitation and deployment suites passed **18 tests**. The production TypeScript/Vite build passed. Browser checks exercised fresh-guest example import, all 28 Python graph nodes, file inspection, zoom, fit, expansion, patch/test views, the collapsible incident panel, and 390px mobile layout. The graph and patch views had no violations in the selected automated WCAG A/AA scans and no JavaScript page errors. Live execution evidence and browser captures are in the ignored local `artifacts/workspace-upgrade/` directory; its test session file is private and is not published.
+
+
 ## Real repository workflow — October 18
 
 Three live Backboard investigations executed real commands in disposable local Docker containers, using real FalkorDB graphs:

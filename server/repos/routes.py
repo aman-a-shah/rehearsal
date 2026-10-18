@@ -78,7 +78,9 @@ def install_routes(app, service):
         return {"user": account, "allowance": allowance, "github_configured": bool(client_id and client_secret and service.store.cipher),
                 "provider_available": service.provider.available(), "sandbox": service.runner.configuration(),
                 "limits": {"files": 1800, "archive_mb": 12, "runtimes": ["Python", "Node.js / TypeScript"]},
-                "examples": [{"id": k, "name": v["name"], "description": v["description"], "runtime": v["runtime"], "incident": v["incident"]} for k, v in EXAMPLES.items()]}
+                "examples": [{"id": k, "name": v["name"], "description": v["description"], "runtime": v["runtime"], "incident": v["incident"],
+                              "file_count": len(v["files"]), "featured": v.get("featured", False), "challenge": v.get("challenge", "Quick introduction")}
+                             for k, v in EXAMPLES.items()]}
 
     @router.post("/auth/guest")
     def guest(request: Request, response: Response):

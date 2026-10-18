@@ -99,5 +99,8 @@ export type RepoSession = {
     description: string;
     runtime: string;
     incident: string;
+    file_count: number;
+    featured: boolean;
+    challenge: string;
   }[];
 };
