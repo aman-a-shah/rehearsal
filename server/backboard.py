@@ -8,6 +8,7 @@ import os
 import httpx
 
 from .domain import Problem
+from .security import UsageBudget
 
 BASE_URL = "https://app.backboard.io/api"
 DEFAULT_MODEL = "claude-sonnet-4-6"
@@ -47,8 +48,10 @@ class Backboard:
             (r.get("assistant_id") for r in engine.journal.all("integration") if r["id"] == "backboard"), None
         )
         self.memory_lock = asyncio.Lock()
+        self.usage = UsageBudget(engine.journal.path.with_name("usage.sqlite"))
 
     async def request(self, http, method, path, **kwargs):
+        self.usage.consume("provider_request")
         try:
             response = await http.request(
                 method, BASE_URL + path,

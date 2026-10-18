@@ -57,6 +57,7 @@ class Runner:
     def __init__(self, engine, mcp, transport=None):
         self.engine, self.mcp, self.transport = engine, mcp, transport
         self.tasks = set()
+        self.launch_lock = asyncio.Lock()
         self.provider = os.getenv("REHEARSAL_PROVIDER", "backboard")
         self.backboard = Backboard(engine, transport)
         self.key = (
@@ -87,11 +88,16 @@ class Runner:
                 "Connect Backboard in Connections, or add BACKBOARD_API_KEY to .env and restart.",
                 503,
             )
-        run = await asyncio.to_thread(self.engine.create_run, mode)
-        task = asyncio.create_task(self.execute(run))
-        self.tasks.add(task)
-        task.add_done_callback(self.tasks.discard)
-        return run
+        async with self.launch_lock:
+            if self.tasks:
+                raise Problem("run_busy", "Wait for the investigation and memory save to finish.")
+            if mode == "live":
+                self.backboard.usage.consume("live_run")
+            run = await asyncio.to_thread(self.engine.create_run, mode)
+            task = asyncio.create_task(self.execute(run))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
+            return run
 
     async def execute(self, run):
         try:
@@ -195,6 +201,7 @@ class Runner:
         calls, usage = 0, {"input_tokens": 0, "output_tokens": 0}
         async with httpx.AsyncClient(timeout=45, transport=self.transport) as http:
             for _ in range(12):
+                self.backboard.usage.consume("provider_request")
                 response = await http.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={"x-api-key": self.key, "anthropic-version": "2023-06-01"},
@@ -220,6 +227,8 @@ class Runner:
                     current = self.engine.get_run(run["id"])
                     current["usage"] = {**usage, "model": data.get("model", self.model)}
                     self.engine.journal.put("run", current)
+                if usage["input_tokens"] + usage["output_tokens"] > 80000:
+                    raise Problem("token_budget", "The rehearsal reached its token limit. No repair was applied.")
                 messages.append({"role": "assistant", "content": content})
                 tool_calls = [block for block in content if block["type"] == "tool_use"]
                 if not tool_calls:
@@ -234,7 +243,8 @@ class Runner:
                         raise Problem(
                             "tool_budget", "The live agent reached its tool limit."
                         )
-                    result = await call(tool["name"], tool["input"])
+                    arguments = {**tool["input"], "run_id": run["id"]}
+                    result = await call(tool["name"], arguments)
                     results.append(
                         {
                             "type": "tool_result",
@@ -261,7 +271,7 @@ class Runner:
         if self.provider == "backboard" and self.backboard.key and receipt["verified"]:
             with self.engine.lock:
                 run = self.engine.get_run(receipt["run_id"])
-                if run.get("memory_sync") == "saved":
+                if run["mode"] != "live" or run.get("memory_sync") in {"pending", "saved"}:
                     return
                 run["memory_sync"] = "pending"
                 self.engine.journal.put("run", run)

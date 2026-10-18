@@ -64,7 +64,10 @@ def test_boundary_endpoint_requires_session_and_bounds_inputs(tmp_path, monkeypa
     from server.api import create_app
 
     monkeypatch.delenv("BACKBOARD_API_KEY", raising=False)
-    with TestClient(create_app(Engine(tmp_path))) as client:
+    app = create_app(Engine(tmp_path))
+    # Exercise validation independently; rate-limit behavior has its own tests.
+    monkeypatch.setattr(app.state.limits, "check", lambda *args: 0)
+    with TestClient(app) as client:
         headers = {"X-Rehearsal-Request": "1"}
         assert client.post("/api/simulations/sweep", json={"cache_max_age": 900}, headers=headers).status_code == 401
         client.post("/api/session", json={"person": "nia"}, headers=headers)

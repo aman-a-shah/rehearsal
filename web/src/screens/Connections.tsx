@@ -29,6 +29,9 @@ export function Connections({
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [operatorToken, setOperatorToken] = useState("");
+  const [operatorError, setOperatorError] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
   return (
     <>
       <header className="page-heading">
@@ -36,6 +39,84 @@ export function Connections({
         <h1>Connections</h1>
         <p>Configure the investigator and inspect local services.</p>
       </header>
+      <section className="operator-access" aria-labelledby="operator-heading">
+        <div>
+          <h2 id="operator-heading">Operator access</h2>
+          <p>
+            {data.access.operator
+              ? "This browser can configure the provider and start paid investigations. Access expires after one hour."
+              : "Examples run without a key. Paid investigations and provider settings require the workspace operator."}
+          </p>
+        </div>
+        {data.access.operator ? (
+          <button
+            className="secondary"
+            onClick={async () => {
+              try {
+                await request("/operator/logout", {});
+                await onConnected();
+              } catch (e) {
+                setOperatorError((e as Error).message);
+              }
+            }}
+          >
+            Lock operator access
+          </button>
+        ) : (
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              setUnlocking(true);
+              setOperatorError("");
+              try {
+                await request("/operator/login", { token: operatorToken });
+                await onConnected();
+              } catch (e) {
+                setOperatorError((e as Error).message);
+              } finally {
+                setOperatorToken("");
+                setUnlocking(false);
+              }
+            }}
+          >
+            <label htmlFor="operator-token">Operator token</label>
+            <div className="operator-login">
+              <input
+                id="operator-token"
+                type="password"
+                autoComplete="off"
+                minLength={32}
+                maxLength={512}
+                value={operatorToken}
+                onChange={(e) => setOperatorToken(e.target.value)}
+                disabled={unlocking || !data.access.operator_configured}
+                required
+              />
+              <button
+                className="secondary"
+                disabled={
+                  unlocking ||
+                  !data.access.operator_configured ||
+                  operatorToken.length < 32
+                }
+              >
+                {unlocking ? "Verifying…" : "Unlock"}
+              </button>
+            </div>
+            {!data.access.operator_configured && (
+              <p className="fine-print">
+                The server owner must configure REHEARSAL_OPERATOR_TOKEN to
+                enable live access.
+              </p>
+            )}
+          </form>
+        )}
+        {operatorError && (
+          <p className="inline-error" role="alert">
+            {operatorError}
+          </p>
+        )}
+      </section>
       <div className="connections-grid">
         <section className="connection-card">
           <div className="connection-title">
@@ -77,6 +158,7 @@ export function Connections({
               } catch (e) {
                 setError((e as Error).message);
               } finally {
+                setKey("");
                 setPending(false);
               }
             }}
@@ -95,6 +177,8 @@ export function Connections({
                     : "Your Backboard API key"
                 }
                 minLength={8}
+                maxLength={512}
+                disabled={!data.access.can_use_provider || pending}
                 required
                 onChange={(e) => setKey(e.target.value)}
               />
@@ -136,7 +220,12 @@ export function Connections({
             )}
             <button
               className="primary"
-              disabled={pending || running || key.trim().length < 8}
+              disabled={
+                pending ||
+                running ||
+                !data.access.can_use_provider ||
+                key.trim().length < 8
+              }
             >
               {pending ? (
                 <LoaderCircle size={15} className="spin" />
@@ -157,6 +246,20 @@ export function Connections({
             <h2>Execution controls</h2>
             <dl className="property-list">
               <div>
+                <dt>Live investigations</dt>
+                <dd>
+                  {data.usage_limits.live_runs_per_hour} / hour ·{" "}
+                  {data.usage_limits.live_runs_per_day} / day
+                </dd>
+              </div>
+              <div>
+                <dt>Provider requests remaining</dt>
+                <dd>
+                  {data.usage_limits.provider_requests_remaining} /{" "}
+                  {data.usage_limits.provider_requests_per_day}
+                </dd>
+              </div>
+              <div>
                 <dt>Reported spend threshold</dt>
                 <dd>${(data.provider.run_budget_usd || 1).toFixed(2)} / run</dd>
               </div>
@@ -170,7 +273,7 @@ export function Connections({
               </div>
               <div>
                 <dt>Memory writes</dt>
-                <dd>Verified recoveries only</dd>
+                <dd>Verified live recoveries only</dd>
               </div>
               <div>
                 <dt>Apply authority</dt>
@@ -178,9 +281,10 @@ export function Connections({
               </div>
             </dl>
             <p className="fine-print">
-              Reported costs are checked after each response. A response can
-              exceed the threshold. When the provider omits costs, this
-              threshold cannot stop spending.
+              Request quotas apply before every provider call, including memory
+              saves, and survive resets and restarts. They use rolling windows.
+              The dollar threshold depends on reported cost; it is not a billing
+              cap.
             </p>
           </section>
           <section className="connection-mini">

@@ -1,6 +1,11 @@
 export type Repair = "rollback" | "bypass" | "cache";
 export type Person = "nia" | "mira" | "owen" | "reviewer";
-export type Page = "incident" | "context" | "decisions" | "connections";
+export type Page =
+  | "incident"
+  | "examples"
+  | "context"
+  | "decisions"
+  | "connections";
 export type Output = { status: number; body: Record<string, unknown> };
 export type RequestSpan = {
   id: string;
@@ -122,6 +127,19 @@ export type Change = {
   context_revision: number;
 };
 export type Workspace = {
+  access: {
+    public: boolean;
+    operator: boolean;
+    operator_configured: boolean;
+    can_edit: boolean;
+    can_use_provider: boolean;
+  };
+  usage_limits: {
+    live_runs_per_hour: number;
+    live_runs_per_day: number;
+    provider_requests_per_day: number;
+    provider_requests_remaining: number;
+  };
   context: Context;
   diagram: {
     nodes: { id: string; name: string; kind: string }[];

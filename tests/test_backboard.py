@@ -289,6 +289,8 @@ def test_connection_authenticates_without_exposing_key(tmp_path, monkeypatch):
     from server.api import create_app
     monkeypatch.delenv("BACKBOARD_API_KEY", raising=False)
     monkeypatch.setenv("REHEARSAL_PROVIDER", "backboard")
+    token = "test-operator-token-with-at-least-32-characters"
+    monkeypatch.setenv("REHEARSAL_OPERATOR_TOKEN", token)
     calls = []
     def handler(request):
         calls.append(request)
@@ -300,6 +302,7 @@ def test_connection_authenticates_without_exposing_key(tmp_path, monkeypatch):
     with TestClient(app) as client:
         headers = {"X-Rehearsal-Request": "1"}
         client.post("/api/session", json={"person": "nia"}, headers=headers)
+        assert client.post("/api/operator/login", json={"token": token}, headers=headers).status_code == 200
         connected = client.post("/api/connections/backboard", headers=headers, json={"api_key": "private-contract-key", "model": "contract-model", "llm_provider": "anthropic"})
         assert connected.status_code == 200
         assert connected.json()["available"] is True

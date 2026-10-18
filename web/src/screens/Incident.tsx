@@ -50,7 +50,7 @@ export function Incident({
   onConnections,
 }: Props) {
   const [mode, setMode] = useState<"guided" | "live">(
-    data.provider.available ? "live" : "guided",
+    data.provider.available && data.access.can_use_provider ? "live" : "guided",
   );
   const [view, setView] = useState<View>(readView);
   useEffect(() => {
@@ -117,8 +117,18 @@ export function Incident({
             disabled={running || busy}
           >
             <option value="guided">Demo · real tools</option>
-            <option value="live" disabled={!data.provider.available}>
-              Backboard agent{data.provider.available ? "" : " · connect key"}
+            <option
+              value="live"
+              disabled={
+                !data.provider.available || !data.access.can_use_provider
+              }
+            >
+              Backboard agent
+              {!data.access.can_use_provider
+                ? " · operator access"
+                : data.provider.available
+                  ? ""
+                  : " · connect key"}
             </option>
           </select>
           {resolved ? (

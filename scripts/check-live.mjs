@@ -5,10 +5,24 @@ import {
 import { mkdir, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+try {
+  process.loadEnvFile(fileURLToPath(new URL("../.env", import.meta.url)));
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
 const root = fileURLToPath(
   new URL("../artifacts/live-backboard", import.meta.url),
 );
 const baseURL = process.env.REHEARSAL_BASE_URL || "http://127.0.0.1:5180";
+const operatorToken = process.env.REHEARSAL_OPERATOR_TOKEN;
+assert(
+  operatorToken?.length >= 32,
+  "Configure REHEARSAL_OPERATOR_TOKEN before running the live harness.",
+);
+assert(
+  ["127.0.0.1", "localhost", "[::1]"].includes(new URL(baseURL).hostname),
+  "The live harness requires a local test server.",
+);
 const scenario = process.argv[2] || "approval";
 assert(["approval", "blocked", "preview"].includes(scenario));
 await mkdir(root, { recursive: true });
@@ -56,6 +70,7 @@ async function save(run, suffix = "") {
 }
 try {
   await post("/api/session", { person: "nia" });
+  await post("/api/operator/login", { token: operatorToken });
   const initial = await state();
   assert(
     initial.provider.available,
