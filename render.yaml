@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: rehearsal-api
+    runtime: docker
+    plan: starter
+    numInstances: 1
+    healthCheckPath: /api/health
+    disk:
+      name: rehearsal-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: REHEARSAL_PUBLIC
+        value: "1"
+      - key: REHEARSAL_STATE_DIR
+        value: /data/rehearsal
+      - key: REHEARSAL_APP_ORIGIN
+        sync: false
+      - key: REHEARSAL_SESSION_KEY
+        sync: false
+      - key: REHEARSAL_OPERATOR_TOKEN
+        generateValue: true
+      - key: BACKBOARD_API_KEY
+        sync: false
+      - key: REHEARSAL_SANDBOX
+        value: vercel
+      - key: REHEARSAL_SANDBOX_BROKER_SECRET
+        sync: false
+      - key: VERCEL_PROJECT_ID
+        sync: false
+      - key: VERCEL_TEAM_ID
+        sync: false
+      - key: GITHUB_CLIENT_ID
+        sync: false
+      - key: GITHUB_CLIENT_SECRET
+        sync: false

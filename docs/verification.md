@@ -1,5 +1,36 @@
 # Verification record
 
+## Real repository workflow — October 18
+
+Three live Backboard investigations executed real commands in disposable local Docker containers, using real FalkorDB graphs:
+
+| Repository | Before | Generated repair | Independent verification |
+| --- | --- | --- | --- |
+| Python pricing service | Six unittest tests; rounding assertion fails | Two generated alternatives pass; smaller patch selected | Six tests pass again |
+| Node event feed | Five node:test cases; exclusive-cursor assertion fails | Generated source patch fixes pagination | Five tests pass again |
+| Uploaded timeout module | Four existing unittest tests pass | Agent adds a fifth test; it fails on integer zero; generated source patch fixes it | All five tests pass, then pass again in a new container |
+
+The public GitHub importer also fetched and indexed `pallets/itsdangerous` at commit `672971d66a2ef9f85151e53283113f33d642dabd` (50 imported files). Its test suite was not executed. The first pricing browser run correctly rejected a provider response using an unsupported patch format; the adapter was corrected and the subsequent complete live run passed. The timeout check exposed an overbroad protected-filename rule; that was corrected before the successful regression-test run.
+
+The browser check imported a repository, inspected a graph node's source, started a real investigation, displayed the generated diff, downloaded the patch, and inspected the test logs. It reported no browser errors or horizontal overflow at 390 px. Evidence is stored locally under `artifacts/repositories/`; these artifacts contain no deployment or provider credentials.
+
+Two additional investigations imported real public GitHub repositories and executed their baseline, candidates, and repeat verification in separate Vercel microVMs:
+
+| Repository / tested commit | Observed result | Published evidence |
+| --- | --- | --- |
+| `aman-a-shah/rehearsal-python-example` at `3c6a4734155c2a05c7b3c27551269d32884c27ef` | Six tests, one original rounding failure. Two generated alternatives passed; the selected patch passed a fresh repeat. | [Draft PR #1](https://github.com/aman-a-shah/rehearsal-python-example/pull/1), changing only `pricing.py` |
+| `aman-a-shah/rehearsal-node-example` at `cbcfc6b2f18d0636864024f32b5fb69b72604e90` | Five tests, one original exclusive-cursor failure. The source repair passed twice in separate sandboxes. | [Draft PR #1](https://github.com/aman-a-shah/rehearsal-node-example/pull/1), changing only `src/pagination.js` |
+
+Both PRs were inspected before publication. Retrying publication returned the same PR; both remain drafts and the original branches retain their bugs. These runs used a local verification identity seeded from the owner's authorized GitHub CLI session. They verify real GitHub import and publication, but do not substitute for testing the browser OAuth callback. The README screenshot shows the real Python cloud run and its draft PR link.
+
+A separate cloud trial installed `is-number@7.0.0` from npm and passed three checks: the installed dependency worked, API credentials were absent from the sandbox environment, and outbound access to `example.com` was blocked during tests. The production Vercel identity function returned 404 anonymously, returned a short-lived project identity only after authentication, and successfully authorized sandbox creation from the external Python adapter. A live check exposed the SDK's requirement for `writable()` on its bounded log sink; the adapter and its contract test were corrected.
+
+The backend suite completed with **126 passing tests** and two dependency deprecation warnings. After the final persistence and validation changes, the expanded repository suite completed with **56 passing tests**. Its seven added cases bring coverage across these runs to 133 distinct backend tests. Additional checks cover malformed manifests, shared import concurrency, malformed URL ports, and graph recovery from on-disk snapshots without a graceful shutdown save. Coverage also includes archive traversal and links, credential filtering, fixed GitHub hosts and redirects, immutable imports, tenant isolation, encrypted sessions, one-use OAuth state and PKCE, persistent quotas, exact edits, protected files, test-count drops, flaky repeats, graph scope, stale commits, and idempotent draft PR creation. The OAuth callback's network exchanges are mocked in this suite.
+
+The latest frontend build and identity-function tests passed. Browser checks reported no JavaScript errors, no horizontal overflow at 390 px, and zero selected WCAG A/AA findings from Axe on the repository home and workspace. The Linux amd64 API image started successfully with embedded FalkorDB; checks covered secure cookies, account isolation, persistent SQLite history, real graph health, and rejection of the local Docker runner in public mode. After replacing the container with the final image and restarting it, an authenticated session and imported source remained available; a direct FalkorDB query recovered all three import edges. Source and built browser assets were scanned for configured credentials and common secret patterns without findings. These checks do not establish full accessibility or security conformance.
+
+The final public website/API integration and real browser OAuth callback are still pending. Vercel currently hosts the authenticated sandbox identity function only. Render authentication works, but provisioning is blocked by `need_payment_info`; no paid API service has been created. The local and cloud integration checks above are not presented as a completed public deployment.
+
 ## October 18 demo recording and container
 
 The repeatable Chrome capture completed two real Backboard investigations through `anthropic` / `claude-sonnet-4-6`. Under the initial policy, rollback and bypass failed, verified cache passed, owner approval restored all three exports, and Backboard confirmed the memory save. After accepting a 600-second graph policy, the second investigation tested all three repairs and stopped without a proposal. Both used three provider responses. No browser page errors occurred.

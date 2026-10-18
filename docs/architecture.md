@@ -1,5 +1,7 @@
 # Architecture
 
+This document covers the guided Harbor incident. The real repository engine is documented in the [README](../README.md#repair-algorithm), [deployment architecture](repository-deployment.md), and [workspace boundaries](repository-security.md).
+
 Rehearsal has one Python process, an embedded FalkorDB server, two SQLite databases, and a React client. Development uses Vite's proxy. The production build can be served by FastAPI on loopback.
 
 ```mermaid

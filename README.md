@@ -1,137 +1,116 @@
 # Rehearsal
 
-Rehearsal tests incident repairs against customer requirements. A Backboard agent reads dependencies and reviewed facts from FalkorDB, runs three repairs on isolated service copies, and proposes a passing option for owner approval.
+Import a GitHub repository or upload a ZIP, describe a bug, and review a patch tested against your code. FalkorDB selects the relevant source files and dependent tests. A Backboard model proposes repairs; isolated sandboxes execute them. A passing patch can be downloaded or published as a draft pull request after review.
 
 <p align="center">
-  <a href="docs/screenshots/workbench.png">
-    <img src="docs/screenshots/workbench.png" width="900" alt="Bypass trial: Alder returns HTTP 200 but fails its provenance requirement. The dependency map, output diff, and failed check appear together.">
+  <a href="docs/screenshots/repository-repair.png">
+    <img src="docs/screenshots/repository-repair.png" width="900" alt="A live repository rehearsal: the graph connects pricing, checkout, and tests; a generated patch corrects early rounding and passes six tests in two fresh sandboxes.">
   </a>
 </p>
 
-## Try it
+## Use your own code
 
-Requires Python 3.13 and Node 22.12+. Tested on macOS arm64.
+1. Paste a public GitHub URL, sign in with GitHub to choose an authorized repository, or upload a ZIP. Imports are pinned to an exact commit or content digest. Select a subdirectory for a monorepo.
+2. Describe the failure. Review the detected setup and test commands before running them.
+3. Run a rehearsal. The original tests run first. If they pass, Rehearsal can add a regression test and must show it failing before attempting a repair.
+4. Inspect candidate diffs, executed graph queries, the original failure, and passing test logs. The selected patch must pass a second fresh sandbox run without reducing the reported test count.
+5. Download the patch or approve a draft pull request. Publishing requires GitHub write access and rechecks that the base branch still matches the tested commit. Rehearsal does not merge or deploy changes to your application.
+
+The two included starter repositories contain actual Python and Node.js bugs. Their repairs are generated at runtime. The earlier [guided operational incident](docs/guided-workspace.md), including its diagrams and policy examples, remains available from **Guided example**.
+
+You can also import the public [Python pricing repository](https://github.com/aman-a-shah/rehearsal-python-example) or [Node event-feed repository](https://github.com/aman-a-shah/rehearsal-node-example). Their default branches intentionally retain the bugs. Real cloud-verified repairs are available as draft PRs: [Python](https://github.com/aman-a-shah/rehearsal-python-example/pull/1), [Node](https://github.com/aman-a-shah/rehearsal-node-example/pull/1).
+
+## Run locally
+
+Requires Python 3.13, Node 22.12+, and Docker Desktop for local repository execution.
 
 ```sh
 git clone https://github.com/aman-a-shah/rehearsal.git
 cd rehearsal
 npm run setup
+npm run runner:build
+```
+
+Set `BACKBOARD_API_KEY` and `REHEARSAL_SANDBOX=docker` in the ignored `.env`, then run:
+
+```sh
 npm run dev
 ```
 
-Open [Examples](http://127.0.0.1:5180/#examples). Six cases execute real HTTP trials and checks without a key: required provenance, a stricter freshness policy, optional provenance, the exact freshness boundary, expired cache, and two passing repairs. Each includes output inspection and downloadable evidence.
+Open [Rehearsal](http://127.0.0.1:5180). No GitHub OAuth setup is needed for public URL imports or ZIP uploads. Repository repairs use paid model calls; the guided examples remain available without a key.
 
-For the complete approval flow, select **Demo · real tools** in the incident room and click **Run rehearsal**. Reset first: this mode uses the current clock. For model-driven tool selection, [configure operator access and Backboard](docs/development.md#backboard), then select **Backboard agent**.
+The local image includes Python, pytest, Node, and npm. Local containers have no network access, including during setup. Projects requiring additional packages need a prebuilt local runner image or the cloud sandbox adapter. The hosted adapter permits npm/PyPI registries during setup and disables outbound traffic during tests.
 
-## The incident
+## How FalkorDB controls the investigation
 
-Harbor's enrichment API rejects a malformed request. Alder and Beacon cannot export; Cedar still can. Three repairs are available:
-
-| Repair         | Observed result                                                                  |
-| -------------- | -------------------------------------------------------------------------------- |
-| Rollback       | The older worker cannot read the current schema. All three exports fail.         |
-| Bypass         | Exports return HTTP 200, but Alder's required provenance is missing.             |
-| Verified cache | Preserves report data and provenance while the cache meets the freshness policy. |
-
-Only a passing repair can be proposed. Approval rechecks the evidence and output, applies the change once, and saves a receipt. In live mode, verified recoveries are saved to Backboard memory for later investigations.
-
-## How the agent uses FalkorDB
-
-The agent calls four MCP tools: `inspect_context`, `read_source`, `rehearse_repair`, and `recommend_repair`. These invoke fixed, parameterized Cypher and the trial verifier. The model cannot approve a change or execute arbitrary Cypher.
-
-### Nodes and relationships
-
-The dependency map uses `Entity` nodes with a `kind` of `customer`, `capability`, `operation`, `service`, or `incident`. Arrows show stored relationships:
+Each imported snapshot has a separate graph:
 
 <p align="center">
-  <a href="docs/diagrams/dependency-graph.png">
-    <img src="docs/diagrams/dependency-graph.png" width="620" alt="Dependency graph: Alder and Beacon use rich exports, which call provenance resolution on the failing Enrichment API. Cedar uses basic exports. Both export operations run on the shared Export worker; INC-204 is observed on Enrichment API.">
-  </a>
+  <a href="docs/diagrams/repository-graph.svg"><img src="docs/diagrams/repository-graph.svg" width="900" alt="The pricing repository graph: tests import pricing and checkout; checkout imports pricing; pricing declares discounted_total and belongs to payments."></a>
 </p>
 
-Company evidence and completed decisions use these stored relationships:
-
-<p align="center">
-  <a href="docs/diagrams/evidence-graph.png">
-    <img src="docs/diagrams/evidence-graph.png" width="620" alt="Evidence graph: Claim is SUPPORTED_BY Source; a new source revision SUPERSEDES an older one. Decision CITES Source and CREATED Task. Task is ASSIGNED_TO a person who is MEMBER_OF a team. Ownership is a claim property; Context stores the reviewed topology hash and revision.">
-  </a>
-</p>
-
-`Claim` stores `subject`, `predicate`, and a JSON-encoded `value`; for example, `alder / requires_provenance / true` and `worker / owner / "nia"`. Subjects refer to entity IDs by property. Active claims must point to a current source; authoritative sources supply the required policy and ownership facts. A `Context` node stores the reviewed topology hash and revision. See the [seed records](server/seed.py) and [graph implementation](server/graph.py).
-
-### Queries that control the repair
-
-The impact query follows customer dependencies to the failed service. With `$failed = "enrichment"`, it returns Alder and Beacon:
-
-```cypher
-MATCH (a:Entity {kind:'customer'})-[:USES]->(c:Entity)
--[:IMPLEMENTED_BY]->(o:Entity)-[:CALLS*0..4]->(d:Entity)
--[:RUNS_ON]->(:Entity {id:$failed})
-RETURN DISTINCT a.id, c.id, o.id, d.id ORDER BY a.id
-```
-
-The worker-footprint query also returns Cedar. A rollback must therefore preserve all three customers' exports:
-
-```cypher
-MATCH (a:Entity {kind:'customer'})-[:USES]->(:Entity)
--[:IMPLEMENTED_BY]->(:Entity)-[:RUNS_ON]->(:Entity {id:'worker'})
-RETURN DISTINCT a.id ORDER BY a.id
-```
-
-Requirements come from active claims and their current supporting sources:
-
-```cypher
-MATCH (c:Claim {active:true})-[:SUPPORTED_BY]->(s:Source {current:true})
-RETURN c.subject, c.predicate, c.value, s.id, s.authoritative ORDER BY c.id
-```
-
-Alder's provenance claim rejects bypass despite HTTP 200. Accepting a cache-policy revision from 900 to 600 seconds makes the sample's 720-second cache ineligible. Missing, conflicting, or unavailable graph context blocks new approvals.
-
-### Graph functions
-
-Implemented in [server/graph.py](server/graph.py):
-
-| Function | Work performed |
+| Nodes / relationship | Evidence represented |
 | --- | --- |
-| `context()` | Validates the topology hash; resolves current claims; returns affected paths, worker footprint, owner, source revisions, and a context fingerprint. |
-| `source_list(history)` | Reads current sources or their revision history. |
-| `diagram()` | Reads stored entity nodes and edges for the dependency map. |
-| `accept_policy(change)` | Checks expected revisions, supersedes the old source, replaces active claims, and advances the context revision in one Cypher write. |
-| `record_decision(receipt)` | Uses `MERGE` to store a decision, source citations, and an assigned follow-up task without duplicating them on retry. |
+| `RepoSnapshot` | SHA-256 digest of imported file contents |
+| `RepoFile -[:IMPORTS]-> RepoFile` | Statically resolved local imports |
+| `RepoFile -[:DECLARES]-> CodeSymbol` | Symbol name and source line |
+| `RepoFile -[:OWNED_BY]-> CodeOwner` | Ownership inferred from CODEOWNERS patterns |
+| `RepairRun -[:TESTED]-> RepairCandidate` | Candidate and test outcome |
+| `RepairCandidate -[:CHANGES]-> RepoFile` | Files modified by a candidate |
 
-### Algorithms and execution
+The incident and failing logs identify seed files. FalkorDB retrieves their dependencies:
+
+```cypher
+MATCH (s:RepoFile)-[:IMPORTS*0..6]->(f:RepoFile)
+WHERE s.path IN $paths
+RETURN DISTINCT f.path ORDER BY f.path LIMIT 160
+```
+
+It then finds dependent source files and tests:
+
+```cypher
+MATCH (f:RepoFile)-[:IMPORTS*0..8]->(s:RepoFile)
+WHERE s.path IN $paths
+RETURN DISTINCT f.path, f.kind ORDER BY f.path LIMIT 160
+```
+
+Ownership and edit eligibility come from subsequent parameterized graph queries. The model receives that source context, failure output, and allowed paths. Changes outside the permitted scope are rejected. A missing or mismatched graph blocks investigation and publication. The complete configured test command runs; the graph is not used to omit regression tests.
+
+Python imports and declarations are parsed with `ast`. JavaScript/TypeScript literal imports and declarations are extracted statically. Computed imports, TypeScript aliases, dependency injection, and complete GitHub CODEOWNERS semantics are not resolved. These relationships are dependency evidence, not measured runtime coverage.
+
+## Repair algorithm
 
 <p align="center">
-  <a href="docs/diagrams/repair-algorithm.png">
-    <img src="docs/diagrams/repair-algorithm.png" width="460" alt="Repair algorithm: resolve graph context, test all three repairs on isolated copies, and propose only a candidate that passes every check. In the initial fixture only verified cache passes. The current owner must approve within two minutes; the server revalidates before an atomic apply and receipt, then synchronizes evidence to FalkorDB. No eligible repair causes abstention; stale evidence blocks approval.">
-  </a>
+  <a href="docs/diagrams/repository-algorithm.svg"><img src="docs/diagrams/repository-algorithm.svg" width="900" alt="Rehearsal imports a snapshot, reproduces the failure, queries FalkorDB, generates patches, tests and repeats them, then asks for review before opening a draft PR."></a>
 </p>
 
-1. **Resolve context.** Traverse at most four `CALLS` edges to the failing service. Deduplicate affected customers. Query the worker footprint separately so rollback also checks Cedar. Required authoritative facts must each resolve to one value.
-2. **Evaluate candidates.** Back up SQLite into a temporary database for each repair, change its configuration, and call the actual ASGI export handlers. Check availability, original account/amount/currency, required provenance, schema, unaffected customers, and `0 ≤ cache_age ≤ policy_limit`. Eligibility is the conjunction of all checks.
-3. **Recommend.** All three candidates must be tested first. The server accepts only a passing repair or an abstention. Guided runs and simulations prefer cache, then bypass, then rollback. The live agent receives that preference in its prompt; the verifier enforces eligibility.
-4. **Bind approval.** SHA-256 hashes of canonical JSON bind the context, runtime, trial evidence, owner, and a two-minute expiry. Approval rereads the graph, reruns the selected trial, and compares output hashes.
-5. **Apply once.** A SQLite `BEGIN IMMEDIATE` transaction compares the current runtime hash, changes the service, and inserts a receipt. Retries reuse that receipt. Decision/task synchronization to FalkorDB is retried after an interrupted write.
+1. **Snapshot:** validate and filter the archive; save an immutable source digest and build its graph. Repository code never executes during import.
+2. **Baseline:** run the original setup and test commands in a disposable sandbox and record the actual result.
+3. **Investigate:** rank seed files using filenames and incident terms; traverse dependencies, dependents, and ownership in FalkorDB. Bound source context to 100,000 characters. If the original tests passed, generate one new regression test from this context and require it to fail on the original source.
+4. **Generate:** request up to two independent source repairs. Apply exact, unique replacements to copies of the original snapshot. Existing tests, dependency manifests, and test/build configuration are protected.
+5. **Test:** run each candidate from a clean sandbox. Require successful tests and at least the original reported test count. Prefer fewer changed files, then fewer changed lines, among passing candidates.
+6. **Repeat:** rerun the preferred candidate in another fresh sandbox. A failed repeat makes it ineligible; try the next passing candidate or abstain.
+7. **Review:** hash the snapshot, commands, changes, and both test results. Require that review digest and an unchanged GitHub base before creating a deterministic repair branch and draft PR. Publication retries recover an already-created PR.
 
-The [counterfactual evaluator](server/simulation.py) captures one service snapshot and observation time, then evaluates the three repairs on separate copies using three worker threads. Examples do not create proposals or edit graph policy. The default boundary suite evaluates 12 scenarios and 36 trials, including cache ages of 900 and 901 seconds.
+Implementation: [graph extraction and queries](server/repos/codegraph.py), [orchestration](server/repos/service.py), [patch validation](server/repos/patches.py), [sandbox adapters](server/repos/sandbox.py), and [GitHub integration](server/repos/github.py).
 
-The [workflow engine](server/engine.py) and [HTTP verifier](server/workload.py) implement these checks. [Architecture](docs/architecture.md) covers recovery and provider behavior.
+## Scope and deployment
 
-## Public demo controls
+This version supports text-based Python and Node.js/TypeScript repositories with self-contained tests. Archives are limited to 12 MB compressed, 24 MB expanded, and 1,800 imported files. Binary files, credential files, links, and files over 512 KB are excluded or rejected. The UI lists excluded files. Tests requiring production secrets, internet services, databases, or an unsupported runtime need a dedicated runner configuration. Passing tests do not establish production correctness.
 
-Paid actions require an operator session. Default rolling quotas allow 3 live runs/hour, 6/day, and 60 provider requests/day across the workspace, including connection checks and memory writes. Quotas are reserved before requests and survive workspace resets and restarts. Guided runs and examples make no provider calls.
+Deployment uses **Vercel for the website**, **one persistent API container** for accounts, source, queue, and FalkorDB, and **Vercel microVMs** for untrusted code. A Render blueprint is included. See [deployment and GitHub setup](docs/repository-deployment.md).
 
-Public mode restricts shared-state changes to the operator and disables external MCP. API requests have rate, body-size, and concurrency limits. Validation errors omit submitted values; keys are excluded from responses, journals, browser storage, and the repository. See [security and deployment](docs/security.md) for configuration and limits.
+GitHub OAuth uses state and PKCE. Sessions are opaque, server-stored, and HttpOnly; GitHub tokens are encrypted at rest. Repository endpoints enforce workspace ownership. Provider and GitHub credentials never enter test sandboxes. Persistent quotas reserve usage before execution. See [repository security](docs/repository-security.md).
 
-## Development
-
-React/TypeScript provides the interface; FastAPI serves the API and local export service. FalkorDB stores company context. SQLite stores service state, trial journals, receipts, and usage quotas.
+## Verify
 
 ```sh
 npm run build
 npm test
+npm run test:repositories
+npm run test:identity
 ```
 
-See [development and browser tests](docs/development.md), [container deployment](docs/deployment.md), the [demo video plan](docs/demo.md), and [verification results](docs/verification.md).
+`scripts/check-repositories.mjs` checks the browser workflow; its opt-in `REHEARSAL_CHECK_LIVE=1` mode performs paid model calls and real container tests. `scripts/verify-repository-live.py --live` checks public GitHub import, a Node repair, and an uploaded bug requiring a generated regression. `scripts/verify-github-live.py --live` checks cloud execution on the public examples; publication is a separate opt-in step after diff review. See [observed results](docs/verification.md) and the [recording walkthrough](docs/repository-demo.md).
 
-This is a local simulator with fictional company data and three predefined repairs. Demo identities are not production authentication. The project uses AI-assisted code.
+Built with AI assistance. Model suggestions remain unverified until the configured checks and human review complete.

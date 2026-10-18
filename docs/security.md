@@ -1,5 +1,7 @@
 # Access and resource limits
 
+This page describes the original guided company demo. Real repository workspaces use separate account, sandbox, and quota controls documented in [repository security](repository-security.md).
+
 Paid provider operations require a separate operator session. Selecting Nia or another demo identity does not grant that access. The default server binds to loopback; a public deployment needs HTTPS and the public-mode settings below.
 
 ## Credentials

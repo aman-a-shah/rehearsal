@@ -14,3 +14,5 @@ web/dist/
 web/test-results/
 web/playwright-report/
 artifacts/
+.vercel/
+.vercel

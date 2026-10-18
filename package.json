@@ -11,6 +11,9 @@
     "test:live": "node scripts/check-live.mjs",
     "screenshots": "node scripts/screenshots.mjs",
     "demo:record": "node scripts/record-demo.mjs",
-    "demo:export": ".venv/bin/python scripts/export-demo.py"
+    "demo:export": ".venv/bin/python scripts/export-demo.py",
+    "runner:build": "docker build -t rehearsal-runner:local runner",
+    "test:repositories": ".venv/bin/python -m pytest tests/test_repositories.py -q",
+    "test:identity": "node --test scripts/test-sandbox-identity.mjs"
   }
 }

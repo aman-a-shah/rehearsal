@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="840" viewBox="0 0 1536 840" role="img" aria-labelledby="title desc">
+  <title id="title">The repository repair algorithm</title>
+  <desc id="desc">Pin an immutable repository snapshot, reproduce the failure, query FalkorDB for context, generate bounded source patches, test each in a fresh sandbox, repeat a passing candidate, and require review before a draft PR. Passing original tests require a new failing regression first. Unverified changes stop.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#80988a" stroke-width="1.5"/></marker></defs>
+  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#272c31}.small{font-size:17px;fill:#59675e}.label{font-size:14px;letter-spacing:1.2px;fill:#54715f}.name{font-size:23px;font-weight:600}.edge{fill:none;stroke:#80988a;stroke-width:2;marker-end:url(#arrow)}.card{fill:white;stroke:#d9e1d9;stroke-width:1.4}</style>
+  <rect width="1536" height="840" fill="#f8faf7"/><rect width="1536" height="72" fill="white"/><path d="M0 72H1536" stroke="#dce2dc"/>
+  <text x="60" y="45" font-size="26" font-weight="700" letter-spacing="-1">rehearsal<tspan fill="#397656">.</tspan></text>
+  <text x="1476" y="43" text-anchor="end" class="small">Repair algorithm · Evidence before publication</text>
+  <text x="100" y="147" font-size="34" font-weight="600" letter-spacing="-1">Reproduce. Repair. Repeat.</text>
+  <text x="100" y="182" class="small">Every candidate starts from the same snapshot. A passing result must be independently repeated.</text>
+  <path class="edge" d="M480 305H578"/><path class="edge" d="M958 305H1056"/>
+  <path class="edge" d="M1246 374V443"/><path class="edge" d="M1056 512H958"/><path class="edge" d="M578 512H480"/>
+  <rect class="card" x="100" y="236" width="380" height="138" rx="9"/><text x="126" y="268" class="label">01 · SNAPSHOT</text><text x="126" y="305" class="name">Import an exact commit</text><text x="126" y="337" class="small">Validate files. Build the code graph.</text>
+  <rect class="card" x="578" y="236" width="380" height="138" rx="9"/><text x="604" y="268" class="label">02 · REPRODUCE</text><text x="604" y="305" class="name">Execute the original tests</text><text x="604" y="337" class="small">Require a recognizable test failure.</text>
+  <rect x="1056" y="236" width="380" height="138" rx="9" fill="#eef5ef" stroke="#69937a" stroke-width="1.5"/><text x="1082" y="268" class="label">03 · INVESTIGATE</text><text x="1082" y="305" class="name">Query FalkorDB</text><text x="1082" y="337" class="small">Source context, dependents, owners.</text>
+  <rect class="card" x="1056" y="443" width="380" height="138" rx="9"/><text x="1082" y="475" class="label">04 · GENERATE</text><text x="1082" y="512" class="name">Propose source patches</text><text x="1082" y="544" class="small">Up to two candidates; protected tests.</text>
+  <rect class="card" x="578" y="443" width="380" height="138" rx="9"/><text x="604" y="475" class="label">05 · TEST</text><text x="604" y="512" class="name">Run each in a fresh VM</text><text x="604" y="544" class="small">Pass the checks. Keep the test count.</text>
+  <rect class="card" x="100" y="443" width="380" height="138" rx="9"/><text x="126" y="475" class="label">06 · REPEAT</text><text x="126" y="512" class="name">Verify the smallest fix</text><text x="126" y="544" class="small">Another clean VM. Same test command.</text>
+  <text x="578" y="409" class="small">If tests pass initially: add a new test and prove it fails first.</text>
+  <path class="edge" d="M290 581V658H578"/>
+  <rect x="578" y="620" width="858" height="92" rx="9" fill="#eef5ef" stroke="#69937a" stroke-width="1.5"/>
+  <text x="604" y="653" class="label">07 · HUMAN REVIEW</text><text x="604" y="686" class="name">Inspect the diff → approve → open a draft PR</text>
+  <path d="M100 754H1436" stroke="#dce2dc"/>
+  <circle cx="108" cy="792" r="4" fill="#397656"/><text x="126" y="798" class="small">No verified candidate? Stop and show the evidence.</text>
+  <text x="1436" y="798" text-anchor="end" class="small">Publication checks the tested base SHA again.</text>
+</svg>

@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1536" height="740" viewBox="0 0 1536 740" role="img" aria-labelledby="title desc">
+  <title id="title">The pricing repository, connected in FalkorDB</title>
+  <desc id="desc">The pricing test imports pricing. The checkout test imports checkout, which imports pricing. Pricing declares discounted_total and belongs to payments. Reverse traversal finds checkout and both tests when pricing is investigated.</desc>
+  <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M1 1 L7 4 L1 7" fill="none" stroke="#80988a" stroke-width="1.5"/></marker></defs>
+  <style>text{font-family:Arial,Helvetica,sans-serif;fill:#272c31}.small{font-size:17px;fill:#59675e}.label{font-size:14px;letter-spacing:1.2px;fill:#54715f}.name{font-size:22px;font-weight:600}.edge{fill:none;stroke:#80988a;stroke-width:2;marker-end:url(#arrow)}.card{fill:white;stroke:#d9e1d9;stroke-width:1.4}</style>
+  <rect width="1536" height="740" fill="#f8faf7"/>
+  <rect width="1536" height="72" fill="white"/><path d="M0 72H1536" stroke="#dce2dc"/>
+  <text x="60" y="45" font-size="26" font-weight="700" letter-spacing="-1">rehearsal<tspan fill="#397656">.</tspan></text>
+  <text x="1476" y="43" text-anchor="end" class="small">Repository graph · Python pricing service</text>
+  <text x="100" y="147" font-size="34" font-weight="600" letter-spacing="-1">A change has neighbors.</text>
+  <text x="100" y="182" class="small">FalkorDB follows imports to find dependent code, tests, symbols, and owners.</text>
+  <path class="edge" d="M410 303H620Q660 303 660 343V348"/>
+  <text x="489" y="289" class="label">IMPORTS</text>
+  <path class="edge" d="M410 510H465"/>
+  <path class="edge" d="M620 466V440"/>
+  <rect class="card" x="100" y="257" width="310" height="92" rx="9"/>
+  <text x="124" y="290" class="label">TEST</text><text x="124" y="321" class="name">tests/test_pricing.py</text>
+  <rect class="card" x="100" y="466" width="310" height="92" rx="9"/>
+  <text x="124" y="499" class="label">TEST</text><text x="124" y="530" class="name">tests/test_checkout.py</text>
+  <rect class="card" x="465" y="466" width="310" height="92" rx="9"/>
+  <text x="489" y="499" class="label">DEPENDENT SOURCE</text><text x="489" y="530" class="name">checkout.py</text>
+  <rect x="530" y="348" width="310" height="92" rx="9" fill="#eef5ef" stroke="#69937a" stroke-width="1.5"/>
+  <text x="554" y="381" class="label">INVESTIGATION SEED</text><text x="554" y="412" class="name">pricing.py</text>
+  <path class="edge" d="M840 381H1000Q1030 381 1030 351V318H1090"/>
+  <text x="908" y="356" class="label">DECLARES</text>
+  <path class="edge" d="M840 406H1000Q1030 406 1030 436V492H1090"/>
+  <text x="898" y="461" class="label">OWNED_BY</text>
+  <rect class="card" x="1090" y="272" width="346" height="92" rx="9"/>
+  <text x="1114" y="305" class="label">SYMBOL</text><text x="1114" y="336" class="name">discounted_total</text>
+  <rect class="card" x="1090" y="446" width="346" height="92" rx="9"/>
+  <text x="1114" y="479" class="label">CODEOWNER</text><text x="1114" y="510" class="name">@payments</text>
+  <path d="M100 625H1436" stroke="#dce2dc"/>
+  <circle cx="108" cy="664" r="4" fill="#397656"/>
+  <text x="126" y="670" class="small">Reverse traversal reaches checkout and both test modules.</text>
+  <text x="1436" y="670" text-anchor="end" class="small">The full configured test suite still runs.</text>
+</svg>

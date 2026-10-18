@@ -1,5 +1,7 @@
 # Deployment
 
+For the real repository product with Vercel hosting, sandbox execution, and GitHub sign-in, use [repository deployment](repository-deployment.md). This page covers the original single-host demo deployment.
+
 Run one persistent container behind the hosting platform's HTTPS proxy. The container serves the built React app and FastAPI together, and starts embedded FalkorDB. A static-site host alone cannot run the workspace.
 
 ## Container and storage
