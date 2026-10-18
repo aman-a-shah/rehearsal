@@ -59,6 +59,22 @@ def test_current_owner_required(engine):
     assert engine.service.read()["mutation_count"] == 0
 
 
+def test_overlong_recommendation_is_rejected_without_truncating_evidence(engine):
+    run = engine.create_run("guided")
+    for repair in ("rollback", "bypass", "cache"):
+        engine.tool(run["id"], "rehearse_repair", {"repair": repair})
+    with pytest.raises(Problem, match="recommendation is too long"):
+        engine.tool(run["id"], "recommend_repair", {"repair": "cache", "reason": "x" * 2001})
+    rejected = engine.get_run(run["id"])
+    assert rejected["proposal"] is None and rejected["recommendation"] is None
+    assert rejected["status"] == "running"
+    reason = "Cache preserves Alder's provenance under cache-policy. Rollback breaks schema compatibility; bypass omits provenance. Repair the live request format next."
+    engine.tool(run["id"], "recommend_repair", {"repair": "cache", "reason": reason})
+    assert engine.get_run(run["id"])["recommendation"]["reason"] == reason
+    assert engine.get_run(run["id"])["status"] == "awaiting_approval"
+    assert engine.service.read()["mutation_count"] == 0
+
+
 def test_reviewed_policy_invalidates_proposal(engine):
     run = prepare(engine)
     change = engine.propose_policy(600)

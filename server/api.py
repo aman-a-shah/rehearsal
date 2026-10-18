@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 import secrets
 import time
@@ -8,7 +9,7 @@ from typing import Literal
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
-from fastapi.responses import JSONResponse, FileResponse
+from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, ConfigDict, Field
 from starlette.middleware.trustedhost import TrustedHostMiddleware
@@ -17,6 +18,7 @@ from .agent import Runner, make_mcp
 from .domain import Problem
 from .engine import Engine
 from .workload import workload
+from .simulation import simulate, sweep
 
 load_dotenv(override=False)
 
@@ -43,6 +45,22 @@ class PolicyInput(Input):
 
 class ReviewInput(Input):
     accept: bool
+
+
+class SimulationInput(Input):
+    cache_max_age: int = Field(ge=0, le=86400, strict=True)
+    requires_provenance: bool = Field(strict=True)
+    cache_age: int = Field(ge=0, le=86400, strict=True)
+
+
+class SweepInput(Input):
+    cache_max_age: int = Field(ge=0, le=86400, strict=True)
+
+
+class ConnectionInput(Input):
+    api_key: str = Field(min_length=8, max_length=512)
+    model: str = Field(min_length=1, max_length=150)
+    llm_provider: Literal["anthropic", "openai", "google", "openrouter"] = "anthropic"
 
 
 def create_app(engine=None, runner_factory=Runner):
@@ -83,6 +101,8 @@ def create_app(engine=None, runner_factory=Runner):
                 "http://localhost:5180",
                 "http://127.0.0.1:8780",
                 "http://localhost:8780",
+                f"http://127.0.0.1:{os.getenv('REHEARSAL_WEB_PORT', '5180')}",
+                f"http://localhost:{os.getenv('REHEARSAL_WEB_PORT', '5180')}",
                 str(request.base_url).rstrip("/"),
             }:
                 return JSONResponse(
@@ -145,8 +165,53 @@ def create_app(engine=None, runner_factory=Runner):
         return core.get_run(id)
 
     @app.post("/api/runs/{id}/approve")
-    def approve(id: str, body: ApprovalInput, request: Request):
-        return core.approve(id, person(request), body.digest)
+    async def approve(id: str, body: ApprovalInput, request: Request):
+        receipt = await asyncio.to_thread(core.approve, id, person(request), body.digest)
+        runner.remember(receipt)
+        return receipt
+
+    @app.get("/api/runs/{id}/events")
+    async def events(id: str, request: Request):
+        await asyncio.to_thread(core.get_run, id)
+
+        async def stream():
+            previous = None
+            heartbeat = 0
+            while not await request.is_disconnected():
+                current = await asyncio.to_thread(core.get_run, id)
+                encoded = json.dumps(current, separators=(",", ":"))
+                if encoded != previous:
+                    yield f"data: {encoded}\n\n"
+                    previous = encoded
+                if current["status"] not in {"queued", "running"}:
+                    break
+                heartbeat += 1
+                if heartbeat % 40 == 0:
+                    yield ": heartbeat\n\n"
+                await asyncio.sleep(0.25)
+
+        return StreamingResponse(stream(), media_type="text/event-stream", headers={
+            "Cache-Control": "no-cache", "X-Accel-Buffering": "no",
+        })
+
+    @app.post("/api/simulations")
+    def simulation(body: SimulationInput, request: Request):
+        person(request)
+        return simulate(core, body.cache_max_age, body.requires_provenance, body.cache_age)
+
+    @app.post("/api/simulations/sweep")
+    def simulation_sweep(body: SweepInput, request: Request):
+        person(request)
+        return sweep(core, body.cache_max_age)
+
+    @app.post("/api/connections/backboard")
+    async def connect(body: ConnectionInput, request: Request):
+        person(request)
+        if runner.tasks:
+            raise Problem("run_busy", "Wait for the current investigation to finish before changing connections.")
+        await runner.backboard.connect(body.api_key, body.model, body.llm_provider)
+        runner.provider = "backboard"
+        return runner.configuration()
 
     @app.get("/api/runs/{id}/evidence")
     def evidence(id: str):
@@ -167,6 +232,8 @@ def create_app(engine=None, runner_factory=Runner):
     @app.post("/api/reset")
     def reset(request: Request):
         person(request)
+        if runner.tasks:
+            raise Problem("run_busy", "Wait for the investigation and memory sync to finish before resetting.")
         core.reset()
         return {"status": "reset"}
 

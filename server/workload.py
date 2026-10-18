@@ -18,7 +18,7 @@ class EnrichmentRequest(BaseModel):
     account_id: str
 
 
-def workload(database: ExportDatabase):
+def workload(database: ExportDatabase, trace=None, origin=None):
     service = FastAPI()
     enrichment = FastAPI()
 
@@ -60,7 +60,21 @@ def workload(database: ExportDatabase):
                     transport=httpx.ASGITransport(app=enrichment),
                     base_url="http://enrichment",
                 ) as client:
+                    started = time.perf_counter()
                     response = await client.post("/resolve", json=payload)
+                    if trace is not None:
+                        trace.append({
+                            "id": f"resolve:{account_id}",
+                            "parent_id": f"export:{account_id}",
+                            "customer": account_id,
+                            "service": "enrichment-api",
+                            "method": "POST", "path": "/resolve",
+                            "start_ms": round((started - origin) * 1000, 3),
+                            "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                            "status": response.status_code,
+                            "request": payload,
+                            "response": response.json(),
+                        })
                 if response.status_code != 200:
                     return JSONResponse(
                         {
@@ -78,32 +92,45 @@ def workload(database: ExportDatabase):
     return service
 
 
-async def collect(database):
+async def collect(database, trace=None):
+    origin = time.perf_counter()
     async with httpx.AsyncClient(
-        transport=httpx.ASGITransport(app=workload(database)), base_url="http://exports"
+        transport=httpx.ASGITransport(app=workload(database, trace, origin)), base_url="http://exports"
     ) as client:
         outputs = {}
         for customer in sorted(database.read()["accounts"]):
+            started = time.perf_counter()
             response = await client.get(f"/exports/{customer}")
             outputs[customer] = {
                 "status": response.status_code,
                 "body": response.json(),
             }
+            if trace is not None:
+                trace.append({
+                    "id": f"export:{customer}", "parent_id": None,
+                    "customer": customer, "service": "export-worker",
+                    "method": "GET", "path": f"/exports/{customer}",
+                    "start_ms": round((started - origin) * 1000, 3),
+                    "duration_ms": round((time.perf_counter() - started) * 1000, 3),
+                    "status": response.status_code,
+                    "request": None, "response": response.json(),
+                })
         return outputs
 
 
-def exports(database):
-    return asyncio.run(collect(database))
+def exports(database, trace=None):
+    return asyncio.run(collect(database, trace))
 
 
-def rehearse(database, context, repair: Repair):
+def rehearse(database, context, repair: Repair, *, checked_at=None):
     start = time.perf_counter()
     original = database.read()
-    before = exports(database)
+    before_trace, after_trace = [], []
+    before = exports(database, before_trace)
     with TemporaryDirectory(prefix="rehearsal-trial-") as directory:
         isolated = database.clone(Path(directory) / "export.sqlite")
         isolated.write(database.changed(isolated.read(), repair, context["affected"]))
-        after = exports(isolated)
+        after = exports(isolated, after_trace)
     checks = []
 
     def check(key, title, passed, expected, actual, customer=None):
@@ -126,7 +153,7 @@ def rehearse(database, context, repair: Repair):
         original["schema_version"],
     )
     if repair == "cache":
-        age = time.time() - original["cache"]["timestamp"]
+        age = (time.time() if checked_at is None else checked_at) - original["cache"]["timestamp"]
         maximum = context["values"]["worker:cache_max_age"]
         check(
             "cache_allowed",
@@ -191,6 +218,10 @@ def rehearse(database, context, repair: Repair):
         "exports": after,
         "artifact_hash": fingerprint(after),
         "before": before,
+        "trace": {
+            "before": sorted(before_trace, key=lambda span: span["start_ms"]),
+            "after": sorted(after_trace, key=lambda span: span["start_ms"]),
+        },
         "scope": context["footprint"] if repair == "rollback" else context["affected"],
         "duration_ms": round((time.perf_counter() - start) * 1000, 1),
     }

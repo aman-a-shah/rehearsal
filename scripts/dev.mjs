@@ -3,6 +3,11 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+try {
+  process.loadEnvFile(path.join(root, ".env"));
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
 const children = [];
 let stopping = false;
 function stop() {
@@ -38,7 +43,7 @@ start(path.join(root, ".venv/bin/python"), [
   "--host",
   "127.0.0.1",
   "--port",
-  "8780",
+  process.env.REHEARSAL_API_PORT || "8780",
 ]);
 if (!process.argv.includes("--api-only"))
   start("npm", ["--prefix", "web", "run", "dev"]);

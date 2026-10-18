@@ -155,7 +155,12 @@ class Engine:
                         raise Problem(
                             "unsafe_repair", "That repair did not pass its checks."
                         )
-                    reason = str(arguments.get("reason", ""))[:2000]
+                    reason = str(arguments.get("reason", "")).strip()
+                    if len(reason) > 2000:
+                        raise Problem(
+                            "reason_too_long",
+                            "The recommendation is too long. Retry with a brief plain-text reason under 1500 characters, including the failed alternatives and required follow-up.",
+                        )
                     run["recommendation"] = {"repair": selected, "reason": reason}
                     run["status"] = "awaiting_approval" if selected else "blocked"
                     if selected:

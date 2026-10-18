@@ -46,7 +46,7 @@ class Journal:
 
     def clear(self):
         with self.connect() as db:
-            db.execute("DELETE FROM records")
+            db.execute("DELETE FROM records WHERE kind != 'integration'")
 
 
 class ExportDatabase:

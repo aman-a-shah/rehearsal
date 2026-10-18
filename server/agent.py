@@ -10,6 +10,7 @@ from mcp.server.fastmcp import FastMCP
 from mcp.shared.memory import create_connected_server_and_client_session
 
 from .domain import Problem
+from .backboard import Backboard, DEFAULT_MODEL
 
 
 def make_mcp(engine):
@@ -56,14 +57,23 @@ class Runner:
     def __init__(self, engine, mcp, transport=None):
         self.engine, self.mcp, self.transport = engine, mcp, transport
         self.tasks = set()
+        self.provider = os.getenv("REHEARSAL_PROVIDER", "backboard")
+        self.backboard = Backboard(engine, transport)
         self.key = (
             os.getenv("ANTHROPIC_API_KEY")
             if os.getenv("REHEARSAL_PROVIDER") == "anthropic"
             else None
         )
-        self.model = os.getenv("REHEARSAL_MODEL", "claude-sonnet-5-5")
+        self.model = os.getenv("REHEARSAL_MODEL", DEFAULT_MODEL)
 
     def configuration(self):
+        if self.provider == "backboard":
+            return {
+                "available": bool(self.backboard.key), "name": "Backboard",
+                "model": self.backboard.model, "llm_provider": self.backboard.provider,
+                "memory": True, "assistant_connected": bool(self.backboard.assistant_id),
+                "run_budget_usd": self.backboard.budget,
+            }
         return {
             "available": bool(self.key),
             "name": "Anthropic" if self.key else None,
@@ -71,10 +81,10 @@ class Runner:
         }
 
     async def launch(self, mode):
-        if mode == "live" and not self.key:
+        if mode == "live" and not self.configuration()["available"]:
             raise Problem(
                 "provider_unavailable",
-                "Add an Anthropic API key to .env and restart to enable the live agent.",
+                "Connect Backboard in Connections, or add BACKBOARD_API_KEY to .env and restart.",
                 503,
             )
         run = await asyncio.to_thread(self.engine.create_run, mode)
@@ -134,6 +144,8 @@ class Runner:
                         )
                         if "error" in result:
                             raise Problem(result["error"], result["message"])
+                    elif self.provider == "backboard":
+                        await self.backboard.investigate(run, client, call)
                     else:
                         await self.live(run, client, call)
         except asyncio.CancelledError:
@@ -144,11 +156,18 @@ class Runner:
             )
             raise
         except Exception as error:
-            message = (
-                error.message
-                if isinstance(error, Problem)
-                else "The agent could not complete this rehearsal. No repair was applied."
-            )
+            # MCP's task groups wrap provider failures in ExceptionGroup.
+            # Preserve the safe, actionable message instead of hiding it.
+            def explain(cause):
+                if isinstance(cause, Problem):
+                    return cause.message
+                if isinstance(cause, BaseExceptionGroup):
+                    return next((message for child in cause.exceptions if (message := explain(child))), None)
+                if isinstance(cause, TimeoutError):
+                    return "The investigation reached its three-minute timeout. No repair was applied."
+                return None
+
+            message = explain(error) or "The agent could not complete this rehearsal. No repair was applied."
             await asyncio.to_thread(self.engine.fail_run, run["id"], message)
 
     async def live(self, run, client, call):
@@ -237,3 +256,15 @@ class Runner:
             task.cancel()
         if self.tasks:
             await asyncio.gather(*self.tasks, return_exceptions=True)
+
+    def remember(self, receipt):
+        if self.provider == "backboard" and self.backboard.key and receipt["verified"]:
+            with self.engine.lock:
+                run = self.engine.get_run(receipt["run_id"])
+                if run.get("memory_sync") == "saved":
+                    return
+                run["memory_sync"] = "pending"
+                self.engine.journal.put("run", run)
+            task = asyncio.create_task(self.backboard.remember(receipt))
+            self.tasks.add(task)
+            task.add_done_callback(self.tasks.discard)
