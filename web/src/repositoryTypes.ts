@@ -1,0 +1,103 @@
+export type RepoNode = {
+  id: string;
+  path: string;
+  kind: "source" | "test" | "document";
+  editable: boolean;
+  lines: number;
+};
+export type RepoGraph = {
+  nodes: RepoNode[];
+  edges: { source: string; target: string; type: string }[];
+  symbols: { name: string; path: string; line: number }[];
+  ownership: { path: string; name: string }[];
+  limits: string;
+  warnings: string[];
+};
+export type Project = {
+  id: string;
+  name: string;
+  repository?: string;
+  branch?: string;
+  sha: string | null;
+  digest: string;
+  source: string;
+  runtime: string;
+  directory: string;
+  setup_command: string;
+  test_command: string;
+  incident?: string;
+  graph: RepoGraph;
+  file_count: number;
+  test_count: number;
+  private: boolean;
+  skipped: string[];
+};
+export type Execution = {
+  stage: string;
+  exit_code: number | null;
+  output: string;
+  setup_output: string;
+  duration_ms: number;
+  provider: string;
+  test_command: string;
+  setup_command: string;
+  timed_out: boolean;
+  test_count?: number | null;
+};
+export type Candidate = {
+  id: string;
+  title: string;
+  reason: string;
+  status: string;
+  passed: boolean;
+  message?: string;
+  changes?: Record<string, string>;
+  patch?: string;
+  trial?: Execution;
+  verification?: Execution;
+  review_digest?: string;
+  pull_request?: { url: string; number: number; branch: string };
+};
+export type CodeRun = {
+  id: string;
+  project_id: string;
+  incident: string;
+  status: string;
+  stage: string;
+  created_at: number;
+  finished_at?: number;
+  message?: string;
+  diagnosis?: string;
+  candidates: Candidate[];
+  recommended: string | null;
+  baseline?: Execution;
+  reproduction?: Execution;
+  regression?: { files: Record<string, string>; reason: string };
+  context?: {
+    seeds: string[];
+    files: string[];
+    editable: string[];
+    affected_tests: string[];
+    owners: { path: string; name: string }[];
+    queries: { query: string; rows: number; duration_ms: number }[];
+    omitted_files: number;
+  };
+  events: { stage: string; message: string; at: number }[];
+  test_command: string;
+  setup_command: string;
+  sha: string | null;
+};
+export type RepoSession = {
+  allowance?: { remaining: number; available_after: number | null } | null;
+  user: { id: string; login: string; github: boolean } | null;
+  github_configured: boolean;
+  provider_available: boolean;
+  sandbox: { available: boolean; provider: string; description: string };
+  examples: {
+    id: string;
+    name: string;
+    description: string;
+    runtime: string;
+    incident: string;
+  }[];
+};

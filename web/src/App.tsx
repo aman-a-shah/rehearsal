@@ -268,6 +268,7 @@ export default function App() {
         </div>
         <div className={`navigation-bar ${mobileNav ? "mobile-open" : ""}`}>
           <nav aria-label="Workspace navigation">
+            <a href="#repositories">Your repositories</a>
             {pages.map((item) => (
               <a
                 key={item.id}
