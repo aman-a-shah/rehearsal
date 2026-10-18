@@ -1,16 +1,12 @@
 # Rehearsal
 
-**Test the repair. Keep the promise.**
+Rehearsal tests incident repairs against customer requirements. A Backboard agent reads dependencies and reviewed facts from FalkorDB, runs three repairs on isolated service copies, and proposes a passing option for owner approval.
 
-Rehearsal investigates a broken customer export, tests three repairs against a working miniature service, and asks the accountable owner to approve only a repair that preserves the customer's requirements. FalkorDB connects the incident to customer agreements, dependencies, policies, and ownership.
+![Bypass trial: Alder returns HTTP 200 but fails its provenance requirement. The dependency map, output diff, and failed check appear together.](docs/screenshots/workbench.png)
 
-This repository is a rebuild of an earlier personal prototype. Its Git history records the actual rebuild milestones, not the date the original concept or prototype was created. All company data, people, and incidents are synthetic. See [rebuild notes](docs/rebuild.md).
+## Try it
 
-![Rehearsal incident workspace](docs/incident-room.png)
-
-## Run locally
-
-Use Python 3.13 and Node 22.12 or later. The default embedded FalkorDB configuration was exercised on macOS arm64.
+Requires Python 3.13 and Node 22.12+. Tested on macOS arm64.
 
 ```sh
 git clone https://github.com/aman-a-shah/rehearsal.git
@@ -19,62 +15,125 @@ npm run setup
 npm run dev
 ```
 
-Open **http://127.0.0.1:5180**. The API runs at **http://127.0.0.1:8780**. Keep one server process running; the workflow lock is process-local. Stop both development processes with Ctrl+C. Restart after changing Python code or environment variables; the frontend reloads automatically.
+Open [Examples](http://127.0.0.1:5180/#examples). Six cases execute real HTTP trials and checks without a key: required provenance, a stricter freshness policy, optional provenance, the exact freshness boundary, expired cache, and two passing repairs. Each includes output inspection and downloadable evidence.
 
-The guided demo needs no API key or Docker. It calls the real MCP tools in a fixed sequence, executes three isolated service trials, and stops for human approval. Choose **Reset sample workspace** before a presentation: the synthetic cache begins 12 minutes old and its initial policy allows 15 minutes. A proposed repair expires after two minutes and is tested again when approved.
+For the complete approval flow, select **Demo · real tools** in the incident room and click **Run rehearsal**. Reset first: this mode uses the current clock. For model-driven tool selection, [configure operator access and Backboard](docs/development.md#backboard), then select **Backboard agent**.
 
-For the live agent, copy `.env.example` to `.env`, set `ANTHROPIC_API_KEY`, and restart. Select **Live agent** in the incident room. The server calls the Anthropic Messages API; the model chooses the tool calls. The configured default model is listed in the [official model documentation](https://platform.claude.com/docs/en/models/overview). The key stays on the server. Provider failures are shown as errors; they do not silently switch to the guided demo.
+## The incident
 
-To serve the built frontend from the API process:
+Harbor's enrichment API rejects a malformed request. Alder and Beacon cannot export; Cedar still can. Three repairs are available:
 
-```sh
-npm run build
-npm run dev -- --api-only
+| Repair         | Observed result                                                                  |
+| -------------- | -------------------------------------------------------------------------------- |
+| Rollback       | The older worker cannot read the current schema. All three exports fail.         |
+| Bypass         | Exports return HTTP 200, but Alder's required provenance is missing.             |
+| Verified cache | Preserves report data and provenance while the cache meets the freshness policy. |
+
+Only a passing repair can be proposed. Approval rechecks the evidence and output, applies the change once, and saves a receipt. In live mode, verified recoveries are saved to Backboard memory for later investigations.
+
+## How the agent uses FalkorDB
+
+The agent calls four MCP tools: `inspect_context`, `read_source`, `rehearse_repair`, and `recommend_repair`. These invoke fixed, parameterized Cypher and the trial verifier. The model cannot approve a change or execute arbitrary Cypher.
+
+### Nodes and relationships
+
+The dependency nodes are stored as `Entity` nodes, with a `kind` of `customer`, `capability`, `operation`, or `service`:
+
+```mermaid
+flowchart LR
+    Alder -->|USES| Rich[Rich export]
+    Beacon -->|USES| Rich
+    Cedar -->|USES| Basic[Basic export]
+    Rich -->|IMPLEMENTED_BY| BuildRich[Build rich report]
+    Basic -->|IMPLEMENTED_BY| BuildBasic[Build basic report]
+    BuildRich -->|CALLS| Resolve[Resolve provenance]
+    BuildRich -->|RUNS_ON| Worker[Export worker]
+    BuildBasic -->|RUNS_ON| Worker
+    Resolve -->|RUNS_ON| Enrichment[Enrichment API]
+    Incident[INC-204] -->|OBSERVED_ON| Enrichment
 ```
 
-Open http://127.0.0.1:8780 for that configuration. Run either the development pair or the built configuration, since both use API port 8780.
+Company evidence and completed decisions use these stored relationships:
 
-## What the demo proves
+```mermaid
+flowchart LR
+    Claim[Claim: reviewed fact] -->|SUPPORTED_BY| Source[Source: document, ticket, or chat revision]
+    NewSource[Source: replacement revision] -->|SUPERSEDES| Source
+    Decision[Decision: approved repair] -->|CITES| Source
+    Decision -->|CREATED| Task[Task: follow-up]
+    Task -->|ASSIGNED_TO| Person[Entity: person]
+    Person -->|MEMBER_OF| Team[Entity: team]
+```
 
-The worker sends the wrong request field to an enrichment API. Alder and Beacon's rich exports fail; Cedar's basic export still works. FalkorDB traces those dependencies and supplies the current customer requirements, cache policy, and accountable owner.
+`Claim` stores `subject`, `predicate`, and a JSON-encoded `value`; for example, `alder / requires_provenance / true` and `worker / owner / "nia"`. Subjects refer to entity IDs by property. Active claims must point to a current source; authoritative sources supply the required policy and ownership facts. A `Context` node stores the reviewed topology hash and revision. See the [seed records](server/seed.py) and [graph implementation](server/graph.py).
 
-| Candidate              | Actual result                                                                        | Decision                   |
-| ---------------------- | ------------------------------------------------------------------------------------ | -------------------------- |
-| Roll back the worker   | Worker v1 cannot read schema v2; all three exports return HTTP 409                   | Reject                     |
-| Bypass enrichment      | Rich exports return HTTP 200, but Alder's required provenance is absent              | Reject                     |
-| Use the verified cache | Original report values and required provenance are preserved; cache age meets policy | Propose for owner approval |
+### Queries that control the repair
 
-The owner approves an evidence-bound proposal. The service commits the change and its receipt in one SQLite transaction, verifies the resulting exports, and records a cited decision and follow-up in FalkorDB. Repeated or concurrent approval requests do not apply it twice.
+The impact query follows customer dependencies to the failed service. With `$failed = "enrichment"`, it returns Alder and Beacon:
 
-In **Company context**, propose a 600-second cache limit and accept it as **Policy reviewer**. The old proposal becomes stale. A fresh rehearsal rejects all three options because the cache is now too old. See the [three-minute demo](docs/demo.md) and [architecture](docs/architecture.md).
+```cypher
+MATCH (a:Entity {kind:'customer'})-[:USES]->(c:Entity)
+-[:IMPLEMENTED_BY]->(o:Entity)-[:CALLS*0..4]->(d:Entity)
+-[:RUNS_ON]->(:Entity {id:$failed})
+RETURN DISTINCT a.id, c.id, o.id, d.id ORDER BY a.id
+```
 
-## Verify
+The worker-footprint query also returns Cedar. A rollback must therefore preserve all three customers' exports:
 
-With `npm run dev` running in another terminal:
+```cypher
+MATCH (a:Entity {kind:'customer'})-[:USES]->(:Entity)
+-[:IMPLEMENTED_BY]->(:Entity)-[:RUNS_ON]->(:Entity {id:'worker'})
+RETURN DISTINCT a.id ORDER BY a.id
+```
+
+Requirements come from active claims and their current supporting sources:
+
+```cypher
+MATCH (c:Claim {active:true})-[:SUPPORTED_BY]->(s:Source {current:true})
+RETURN c.subject, c.predicate, c.value, s.id, s.authoritative ORDER BY c.id
+```
+
+Alder's provenance claim rejects bypass despite HTTP 200. Accepting a cache-policy revision from 900 to 600 seconds makes the sample's 720-second cache ineligible. Missing, conflicting, or unavailable graph context blocks new approvals.
+
+### Graph functions
+
+Implemented in [server/graph.py](server/graph.py):
+
+| Function | Work performed |
+| --- | --- |
+| `context()` | Validates the topology hash; resolves current claims; returns affected paths, worker footprint, owner, source revisions, and a context fingerprint. |
+| `source_list(history)` | Reads current sources or their revision history. |
+| `diagram()` | Reads stored entity nodes and edges for the dependency map. |
+| `accept_policy(change)` | Checks expected revisions, supersedes the old source, replaces active claims, and advances the context revision in one Cypher write. |
+| `record_decision(receipt)` | Uses `MERGE` to store a decision, source citations, and an assigned follow-up task without duplicating them on retry. |
+
+### Algorithms and execution
+
+1. **Resolve context.** Traverse at most four `CALLS` edges to the failing service. Deduplicate affected customers. Query the worker footprint separately so rollback also checks Cedar. Required authoritative facts must each resolve to one value.
+2. **Evaluate candidates.** Back up SQLite into a temporary database for each repair, change its configuration, and call the actual ASGI export handlers. Check availability, original account/amount/currency, required provenance, schema, unaffected customers, and `0 ≤ cache_age ≤ policy_limit`. Eligibility is the conjunction of all checks.
+3. **Recommend.** All three candidates must be tested first. The server accepts only a passing repair or an abstention. Guided runs and simulations prefer cache, then bypass, then rollback. The live agent receives that preference in its prompt; the verifier enforces eligibility.
+4. **Bind approval.** SHA-256 hashes of canonical JSON bind the context, runtime, trial evidence, owner, and a two-minute expiry. Approval rereads the graph, reruns the selected trial, and compares output hashes.
+5. **Apply once.** A SQLite `BEGIN IMMEDIATE` transaction compares the current runtime hash, changes the service, and inserts a receipt. Retries reuse that receipt. Decision/task synchronization to FalkorDB is retried after an interrupted write.
+
+The [counterfactual evaluator](server/simulation.py) captures one service snapshot and observation time, then evaluates the three repairs on separate copies using three worker threads. Examples do not create proposals or edit graph policy. The default boundary suite evaluates 12 scenarios and 36 trials, including cache ages of 900 and 901 seconds.
+
+The [workflow engine](server/engine.py) and [HTTP verifier](server/workload.py) implement these checks. [Architecture](docs/architecture.md) covers recovery and provider behavior.
+
+## Public demo controls
+
+Paid actions require an operator session. Default rolling quotas allow 3 live runs/hour, 6/day, and 60 provider requests/day across the workspace, including connection checks and memory writes. Quotas are reserved before requests and survive workspace resets and restarts. Guided runs and examples make no provider calls.
+
+Public mode restricts shared-state changes to the operator and disables external MCP. API requests have rate, body-size, and concurrency limits. Validation errors omit submitted values; keys are excluded from responses, journals, browser storage, and the repository. See [security and deployment](docs/security.md) for configuration and limits.
+
+## Development
+
+React/TypeScript provides the interface; FastAPI serves the API and local export service. FalkorDB stores company context. SQLite stores service state, trial journals, receipts, and usage quotas.
 
 ```sh
 npm run build
 npm test
-npm run test:e2e -- --ui-only
 ```
 
-The browser suite uses installed Google Chrome by default. To use Playwright's Chromium instead:
+See [development and browser tests](docs/development.md), the [demo video plan](docs/demo.md), and [verification results](docs/verification.md).
 
-```sh
-cd web
-npx playwright install chromium
-cd ..
-PLAYWRIGHT_CHANNEL=chromium npm run test:e2e -- --ui-only
-```
-
-`npm run test:e2e` runs both backend and browser suites. Browser tests reset the local sample data; use a disposable demo workspace. Screenshots go to ignored `artifacts/`, and failures retain traces in `web/test-results/`. See the [verification record](docs/verification.md).
-
-## Scope
-
-This is a local, synthetic incident simulator with three bounded repairs and one reviewed policy-editing flow. It is not a general incident-remediation service. Demo identities demonstrate ownership checks, not production authentication. The app binds to loopback and is not configured for public hosting or multiple workers.
-
-The graph is real FalkorDB. The export workload uses actual FastAPI handlers and isolated SQLite copies; internal trial HTTP requests use HTTPX's in-process ASGI transport. The external MCP endpoint is http://127.0.0.1:8780/mcp/. It exposes investigation, source reading, trial execution, and recommendation tools; approval remains a separate human action. [Architecture and recovery behavior](docs/architecture.md) describe the boundaries.
-
-State is stored in `.state/`, excluded from Git. A different `REHEARSAL_STATE_DIR` selects a separate local workspace. An optional `FALKORDB_URL` connects to an external server using the `rehearsal_v2` graph; use a dedicated demo graph because resetting the workspace clears it. External FalkorDB and paid live inference were not exercised in the rebuild verification.
-
-The source is AI-assisted. The authors remain responsible for verifying and understanding it. This repository makes no claim that prior work qualifies for any particular competition.
+This is a local simulator with fictional company data and three predefined repairs. Demo identities are not production authentication. The project uses AI-assisted code.

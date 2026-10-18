@@ -1,39 +1,55 @@
-# A three-minute Rehearsal demo
+# Demo video plan
 
-Start `npm run dev`, open http://127.0.0.1:5180, and reset the sample workspace. Select **Nia Chen · owner**. Use **Guided demo · real tools** for a reproducible presentation. It runs real tools but contains no model inference; say that explicitly. Only present live model execution if you have configured and tested a provider key.
+Target: a 3½-minute, 16:9 screen recording of the running application. Keep the selected execution mode visible. Show one complete live investigation through approval and recovery, then a second investigation whose outcome changes after a graph-policy revision. Use the Examples page for the final reproducible boundary check.
 
-## 0:00 — Establish the incident
+## Prepare the recording
 
-“Two customers cannot export their reports. A third is healthy. Rehearsal asks which repair restores service while preserving what the company promised.”
+1. Follow [setup](../README.md#try-it) and [operator configuration](development.md#backboard). Unlock Connections and verify the Backboard connection before recording. Close the credential form and any terminal showing `.env`.
+2. Use a 1920 × 1080 capture with readable browser zoom, notifications off, and the application filling the frame. Record microphone narration; captions are useful. No slides are needed.
+3. Select **Nia Chen · owner** and **Backboard agent**. Reset the sample workspace immediately before the take. The cache starts 720 seconds old and expires after another 180 seconds under the initial policy. Approval itself expires two minutes after the proposal.
+4. Leave allowance for two live investigations and their continuations. The default hourly limit is three runs. Rehearse narration with **Demo · real tools** or the isolated Examples page so practice does not consume the paid allowance.
+5. Keep a copy of the README graph section ready in another tab. Do not open settings, cloud consoles, provider billing, or source files containing credentials during the recording.
 
-Point to Alder and Beacon's dependency on enrichment, then Cedar's independent basic export. Open a graph node or **View graph query** if the audience wants the underlying evidence.
+## Shot list and narration
 
-## 0:30 — Test all three repairs
+Timings are targets, not claims about provider speed. Keep the actual run visible from launch to decision. If a long wait is shortened in editing, label it clearly.
 
-Click **Run rehearsal**. Explain that each trial executes against its own SQLite copy of the export service.
+| Time | Show and do | Narration |
+| --- | --- | --- |
+| 0:00–0:15 | Incident room: Alder and Beacon fail; Cedar remains healthy. | “Rehearsal tests incident repairs against customer requirements. Two customers cannot export. Before changing the service, the agent has to establish who is affected and what a valid report contains.” |
+| 0:15–0:35 | **Show operations**. Follow the enrichment path. Open **View graph query → FalkorDB queries**, then the multi-hop impact query. | “FalkorDB connects customers to capabilities, operations, and services. This traversal finds Alder and Beacon. A separate worker-footprint query includes Cedar, because rolling back the shared worker can affect it too.” |
+| 0:35–1:05 | Close the drawer. Keep **Backboard agent** visible and click **Run rehearsal**. Open **Activity** while tools execute. | “This is a live Backboard investigation. Its MCP tools read graph context and source records, then test rollback, bypass, and verified cache on separate service copies.” |
+| 1:05–1:35 | In **Workbench**, select **Bypass**. Hold the output diff and failed provenance check. Open the Alder agreement citation. Briefly show **Rollback** and **Verified cache**. | “Bypass returns HTTP 200, but it removes the provenance Alder requires. That requirement comes from a reviewed claim and its source in FalkorDB. Rollback cannot read the current schema. Verified cache preserves the required data and passes the current freshness policy.” |
+| 1:35–2:00 | **Review proposed repair**: owner, source revisions, checks. **Approve and apply repair**. Show the verified receipt and restored outputs. | “The agent proposes; the owner approves. Approval rechecks the graph and reruns the selected repair. The change and receipt commit together, and retries reuse the receipt. The completed decision cites its sources in FalkorDB.” |
+| 2:00–2:25 | Wait for memory sync. Reset. In **Company context**, propose **600** seconds, switch to **Policy reviewer**, accept, then return to Nia. Show the new policy revision. | “Now change one graph fact. This reviewed policy revision lowers the allowed cache age from fifteen minutes to ten. The source revision and active claims change together.” |
+| 2:25–3:00 | Return to incident room. Run the **Backboard agent** again. Show all three failed trials and no proposal. | “The restored incident still has a twelve-minute-old cache. It now fails the ten-minute limit. Bypass still violates Alder’s agreement, and rollback still fails. The agent must stop without a repair proposal.” |
+| 3:00–3:20 | **Examples → Exactly 900 seconds old → Run example**, then **One second changes the outcome → Run example**. Show opposite results. | “Anyone can reproduce the checks without a key. These isolated examples use one fixed timestamp: cache passes at 900 seconds and fails at 901. They do not change the active service or grant approval.” |
+| 3:20–3:30 | README graph diagram and repository link, then return to the app. | “The repository includes the graph queries, verification algorithm, local setup, and tests. Rehearsal uses synthetic company data and three predefined repairs.” |
 
-Open **Bypass enrichment**. Its actual response is HTTP 200, but `provenance_id` is missing. Open Alder's agreement to show why a healthy response alone is insufficient. Close the drawer with Escape.
+## What must be visible
 
-Point to rollback's HTTP 409: the older worker cannot read the current schema, and it also breaks Cedar. The verified cache passes the report, provenance, freshness, and unaffected-customer checks.
+- The live-mode selector, the launch click, actual tool activity, candidate results, and recovery receipt.
+- An executed FalkorDB query and the source claim responsible for rejecting bypass.
+- The accepted graph-policy revision followed by a changed outcome. Changing an Examples/Policy lab assumption alone does not demonstrate a write to the authoritative graph.
+- A clear separation between the live agent and the keyless, deterministic examples.
 
-## 1:20 — Put the owner in control
+If the provider fails, show its error and rerun within the allowance. Do not substitute guided footage while describing it as live. The guided mode is a useful rehearsal and a valid demonstration of the local tools, but it does not demonstrate model-driven tool selection.
 
-Click **Review proposed repair**. The panel shows scope, checks, evidence revision, and accountable owner. The proposal lasts two minutes; approval rechecks current evidence and actual output.
+## Runnable examples for viewers
 
-Click **Approve and apply repair**. Open the decision log. Show the saved result, source revisions, follow-up owner, and downloadable evidence. Explain that the receipt survives a retry or an interrupted journal write.
+| Link (local development) | Assumptions | Result to inspect |
+| --- | --- | --- |
+| [Customer agreement](http://127.0.0.1:5180/#examples/agreement) | 720-second cache, 900-second limit, required provenance | Bypass: HTTP 200, missing provenance, rejected. Cache passes. |
+| [Stricter policy](http://127.0.0.1:5180/#examples/stricter-policy) | 720-second cache, 600-second limit, required provenance | No eligible repair. |
+| [Optional provenance](http://127.0.0.1:5180/#examples/optional-provenance) | Same freshness values, provenance optional | Bypass passes. |
+| [Exact boundary](http://127.0.0.1:5180/#examples/exact-boundary) | Cache age equals the 900-second limit | Cache passes. |
+| [One second late](http://127.0.0.1:5180/#examples/one-second-late) | 901-second cache, 900-second limit | Complete output still fails freshness. |
+| [Two eligible options](http://127.0.0.1:5180/#examples/two-options) | Fresh cache, optional provenance | Bypass and cache pass; the example prefers cache. |
 
-## 2:00 — Change the company evidence
+Each example executes the existing verifier and exposes comparison rows, HTTP traces, output diffs, checks, source records, and downloadable JSON. Results are hypothetical and cannot authorize an active-service change.
 
-Reset the workspace and run another rehearsal. Before approving it, open **Company context** and propose a maximum cache age of **600** seconds. Switch to **Policy reviewer**, then accept the revision.
+## Export and submission
 
-Return to **Incident room**. The old proposal is stale. Click **Run a fresh rehearsal**. All three options now fail: the cache started 12 minutes old, so a ten-minute policy disallows it.
+Export an H.264 MP4 at 1080p with legible narration/captions. Upload the completed recording to a link judges can open without signing in, and put that link in the README and submission form. Check both video and repository from a signed-out browser. This document is the recording plan; it is not a recorded demo.
 
-“The same incident and the same repair candidates produce a different decision when the company's reviewed requirements change. When nothing passes, Rehearsal stops.”
-
-## Before recording
-
-- Reset immediately before starting. Cache freshness follows the clock.
-- Finish approval within its two-minute window; otherwise run a fresh rehearsal.
-- Keep the source, output evidence, and rejection visible long enough to read.
-- Use the live agent only after a successful real provider run; a mocked provider test is not a live demonstration.
-- Disclose that the concept and earlier prototype predate this rebuild. Repository dates record actual rebuild commits; determine competition eligibility from the event's rules.
+Prior live results are in [verification](verification.md#live-backboard-verification). The project history is explained in [rebuild notes](rebuild.md).

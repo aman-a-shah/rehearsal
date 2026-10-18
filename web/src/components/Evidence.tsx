@@ -36,7 +36,7 @@ export function TrialEvidence({
         <div className="callout">
           <strong>Hypothetical experiment</strong>
           <p>
-            These results use the policy lab’s assumptions. They cannot
+            These results use the experiment’s stated assumptions. They cannot
             authorize an active-service change.
           </p>
         </div>

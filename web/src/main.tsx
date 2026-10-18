@@ -8,6 +8,7 @@ import "@fontsource/geist-mono/latin-400.css";
 import App from "./App";
 import "./styles.css";
 import "./studio.css";
+import "./examples.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { Connections } from "./screens/Connections";
+import { Examples } from "./screens/Examples";
 import { CommandMenu, type Command } from "./components/CommandMenu";
 import { RunTimeline } from "./components/RunTimeline";
 import { Experiments } from "./components/Experiments";
@@ -53,6 +54,7 @@ type Panel =
   | { type: "approval" | "trace" | "help" | "reset" };
 const pages: { id: Page; name: string; icon: typeof Activity }[] = [
   { id: "incident", name: "Incident room", icon: Activity },
+  { id: "examples", name: "Examples", icon: BookOpen },
   { id: "context", name: "Company context", icon: GitBranch },
   { id: "decisions", name: "Decision log", icon: History },
   { id: "connections", name: "Connections", icon: Settings2 },
@@ -78,6 +80,12 @@ export default function App() {
     refresh,
   } = workspace;
   const [page, setPage] = useState<Page>(readPage);
+  useEffect(() => {
+    if (data?.access.public && !data.access.operator && !window.location.hash) {
+      window.location.hash = "examples";
+      setPage("examples");
+    }
+  }, [data?.access.public, data?.access.operator]);
   const [panel, setPanel] = useState<Panel | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -153,7 +161,8 @@ export default function App() {
       id: "run",
       title: "Run rehearsal",
       detail: "Guided demo · real tools",
-      disabled: running || busy || !!data?.changes.length,
+      disabled:
+        running || busy || !!data?.changes.length || !data?.access.can_edit,
       action: () => {
         navigate("incident");
         start("guided");
@@ -292,7 +301,7 @@ export default function App() {
             aria-label="Reset sample workspace"
             title="Reset sample workspace"
             onClick={() => setPanel({ type: "reset" })}
-            disabled={running || busy}
+            disabled={running || busy || !data?.access.can_edit}
           >
             <RotateCcw size={15} />
           </button>
@@ -359,6 +368,34 @@ export default function App() {
             </div>
           ) : (
             <>
+              {data.access.public &&
+                !data.access.operator &&
+                page !== "examples" && (
+                  <div className="public-demo-note">
+                    <span>
+                      Public demo · explore isolated examples without a key.
+                    </span>
+                    <button
+                      className="text-button"
+                      onClick={() => navigate("examples")}
+                    >
+                      Browse examples <ArrowRight size={13} />
+                    </button>
+                  </div>
+                )}
+              {page === "examples" && (
+                <Examples
+                  data={data}
+                  onSource={openSource}
+                  onTrial={(trial, sources) =>
+                    setPanel({ type: "trial", trial, sources })
+                  }
+                  onLab={() => {
+                    navigate("incident");
+                    window.location.hash = "incident/lab";
+                  }}
+                />
+              )}
               {data.changes.length > 0 && page !== "context" && (
                 <div className="pending-banner">
                   <FileText size={16} />
@@ -380,7 +417,7 @@ export default function App() {
                   run={run}
                   now={now}
                   running={running}
-                  busy={busy}
+                  busy={busy || !data.access.can_edit}
                   onRun={start}
                   onTrial={(trial) =>
                     setPanel({
@@ -412,7 +449,7 @@ export default function App() {
                 <Company
                   data={data}
                   person={person}
-                  busy={busy}
+                  busy={busy || !data.access.can_edit}
                   onSource={(source) => setPanel({ type: "source", source })}
                   onPropose={propose}
                   onReview={reviewPolicy}
@@ -512,7 +549,7 @@ export default function App() {
                   <PolicyEditor
                     data={data}
                     person={person}
-                    busy={busy}
+                    busy={busy || !data.access.can_edit}
                     onPropose={propose}
                     onReview={reviewPolicy}
                     onIdentity={switchIdentity}
@@ -526,7 +563,11 @@ export default function App() {
               run={run}
               person={person}
               now={now}
-              busy={busy}
+              busy={
+                busy ||
+                !data.access.can_edit ||
+                (run.mode === "live" && !data.access.can_use_provider)
+              }
               onApprove={approve}
               onIdentity={switchIdentity}
               onSource={openSource}
@@ -790,7 +831,7 @@ export default function App() {
                 </button>
                 <button
                   className="primary"
-                  disabled={busy || running}
+                  disabled={busy || running || !data?.access.can_edit}
                   onClick={async () => {
                     if (await act(() => request("/reset", {}))) {
                       setPanel(null);
