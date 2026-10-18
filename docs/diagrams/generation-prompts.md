@@ -1,6 +1,6 @@
 # Diagram generation prompts
 
-These README assets were generated with the built-in `image_gen` tool and checked against the implementation. Keep the stored relationship names, arrow directions, and approval gates aligned with the code when regenerating them.
+The README diagrams were restyled with the built-in `image_gen` tool using the [workbench screenshot](../screenshots/workbench.png) as the visual reference. The palette, typography, node treatment, and spacing follow the app's [studio styles](../../web/src/studio.css) and [base styles](../../web/src/styles.css).
 
 | Asset | Source of truth |
 | --- | --- |
@@ -8,154 +8,134 @@ These README assets were generated with the built-in `image_gen` tool and checke
 | [Evidence graph](evidence-graph.png) | [Claim/source creation, revision updates, and decision writes](../../server/graph.py) |
 | [Repair algorithm](repair-algorithm.png) | [Recommendation and approval](../../server/engine.py), [trial checks](../../server/workload.py), and [transactional application](../../server/storage.py) |
 
-The dependency graph shows the incident-related subset of entities. The evidence graph is a schema across source revisions; it does not imply that superseded evidence supplies current facts. The algorithm's candidate outcomes use the initial 720-second cache and 900-second policy fixture; later trials use the current context and clock.
+Each edit supplied the workbench screenshot as image 1 and the previous version of the corresponding diagram as image 2. Those content references are preserved in commit `d535463`. The full prompt for each asset is the shared style brief followed by its asset-specific section below. Outputs were copied into this directory; README image paths remain unchanged.
 
-## Dependency graph
+The dependency graph shows the incident-related subset of entities. The evidence graph is a schema across source revisions; superseded evidence does not supply current facts. The algorithm's candidate outcomes use the initial 720-second cache and 900-second policy fixture. Labels, arrow directions, and approval gates were checked against the implementation.
+
+## Shared style brief
 
 ```text
-Use case: infographic-diagram.
-Asset: an accurate technical diagram embedded in the GitHub README of Rehearsal, an incident-repair simulator. Make a polished, extremely readable editorial engineering diagram, not a marketing poster. Wide landscape canvas about 2400x1500. Pure white background, generous white space, precise thin orthogonal arrow connectors, restrained rounded rectangles, no shadows, no gradients, no texture, no decorative illustrations, no 3D. Near-black large sans-serif type similar to Geist, monospaced relationship labels. Dark navy-blue for graph/context, muted teal for healthy/passing, muted coral for failures, neutral light gray for generic nodes. Body labels must be comfortably readable when displayed at 900px width. Exact spelling and exact arrow endpoints matter more than decoration. Give the heading modest size; spend most of the canvas on the diagram. Each diagram has a tiny top-left "REHEARSAL / FALKORDB" eyebrow. No extra invented text or relationships.
-Title verbatim: "How the outage reaches customers"
-Subtitle verbatim: "Two customers are affected. Three share the worker."
-Draw exactly these eleven entity boxes and ten directed labeled relationships. The arrows are stored graph edges, not an order-of-execution flow. Names must appear exactly; kind labels can be small above the names.
-Nodes:
-Alder (customer, affected), Beacon (customer, affected), Cedar (customer, healthy), Rich export (capability), Basic export (capability), Build rich report (operation), Build basic report (operation), Resolve provenance (operation), Export worker (service), Enrichment API (service, failed), INC-204 (incident).
-Edges, source -> target, exact relationship label:
-Alder -> Rich export: USES
-Beacon -> Rich export: USES
-Cedar -> Basic export: USES
-Rich export -> Build rich report: IMPLEMENTED_BY
-Basic export -> Build basic report: IMPLEMENTED_BY
-Build rich report -> Resolve provenance: CALLS
-Build rich report -> Export worker: RUNS_ON
-Build basic report -> Export worker: RUNS_ON
-Resolve provenance -> Enrichment API: RUNS_ON
-INC-204 -> Enrichment API: OBSERVED_ON
+Use case: style-transfer.
+Task: redesign the supplied documentation diagram so it belongs visually to the Rehearsal web application.
+Input Image 1 is the STRICT VISUAL STYLE REFERENCE: the actual Rehearsal workbench screenshot. Match its refined, understated, crisp, clean software-interface aesthetic.
+Input Image 2 is the CONTENT REFERENCE / EDIT TARGET: the existing diagram. Preserve its technical meaning and exact named relationships, but completely replace its graphic styling. Do NOT preserve the old diagram's typography, huge headline, strong fills, chunky arrows or rounded blocks. The screenshot is the visual authority.
 
-Layout for clarity: five columns. Upper main row Rich export -> Build rich report -> Resolve provenance -> Enrichment API, with Alder and Beacon stacked at the left and each pointing right into Rich export. Lower row Cedar -> Basic export -> Build basic report -> Export worker; INC-204 below Enrichment API, pointing up into that API. The additional Build rich report -> Export worker connector goes down and right through the open gap between rows; keep it distinct from CALLS. Each edge has its own clear arrowhead at the target and its relationship printed once. All rectangles separated with generous gaps for labels. Use coral only for the failed Enrichment API and subtle affected markers on Alder and Beacon; Cedar teal. Worker neutral to show the healthy customer shares it.
-Bottom annotation strip: "Impact query: Alder + Beacon" and "Worker footprint: Alder + Beacon + Cedar".
-Do not add a direct connection from customer to service. Do not add an edge between Export worker and Enrichment API. Retain every one of the ten specified arrows.
+Specific visual system taken from the app CSS:
+- Background #f7f8fa; white #ffffff panel headers; graph canvas #fafbfd.
+- Main ink #22252d; secondary #656a75. Geist-like sans-serif, medium 500 / semibold 600. Use Geist Mono-like typography for relationship names, small indices, values and metadata.
+- Hairline borders #e0e3e8, node borders #d4dae2, connectors #bec7d6. Very thin 1–1.5 px visual strokes with small precise arrow tips.
+- Default graph nodes #f1f3f6 with text #425168. Sharp 2–3 px corners.
+- Error state: muted background #f7edeb, border #dfc8c2, ink #8b4339.
+- Healthy state: muted background #edf3ef, border #c9d8cd, ink #315b44.
+- Blue #3156cf appears only as a tiny active-tab underline or narrow accent rule, never as a large filled panel.
+- Small status dots, quiet monospaced labels. Large flat white panels divided by subtle lines. Extremely faint dotted graph grid like the screenshot, beneath the node region only.
+- NO gradients anywhere, NO glow, NO texture/grain, NO shadows, NO dark filled headers, NO bold blue/red/green banners, NO bright or saturated node fills, NO pill badges, NO giant step numbers, NO marketing-poster type.
+- Compact understated page title, comfortable white space, exact visual alignment. The node labels must be substantially larger than tiny screenshot labels so they read well at 900 px README width: about 24px at 1600px source width; relationship labels about 20–22px.
+- Do not recreate the screenshot's navigation buttons, personal details, sidebar, or JSON output. Create a standalone DOCUMENTATION DIAGRAM styled using the same design system. It must not look like a screenshot claiming to show a real app screen.
+- All text is crisp. All geometry is flat, precise and aligned.
+At the top use a restrained white header strip with a small lowercase "rehearsal" wordmark, a thin divider, and "Documentation" in muted text. Beneath it place the compact diagram title and its one-line subtitle, then the main bordered panel. Headline no larger than twice node-label size. No giant eyebrow or slogan.
 ```
 
-## Evidence graph
+## dependency-graph.png
 
 ```text
-Use case: infographic-diagram.
-Asset: an accurate technical diagram embedded in the GitHub README of Rehearsal, an incident-repair simulator. Make a polished, extremely readable editorial engineering diagram, not a marketing poster. Wide landscape canvas about 2400x1500. Pure white background, generous white space, precise thin orthogonal arrow connectors, restrained rounded rectangles, no shadows, no gradients, no texture, no decorative illustrations, no 3D. Near-black large sans-serif type similar to Geist, monospaced relationship labels. Dark navy-blue for graph/context, muted teal for healthy/passing, muted coral for failures, neutral light gray for generic nodes. Body labels must be comfortably readable when displayed at 900px width. Exact spelling and exact arrow endpoints matter more than decoration. Give the heading modest size; spend most of the canvas on the diagram. Each diagram has a tiny top-left "REHEARSAL / FALKORDB" eyebrow. No extra invented text or relationships.
-Title verbatim: "From reviewed facts to an accountable decision"
-Subtitle verbatim: "Facts retain their sources. Approved repairs retain their evidence."
-Draw a schema diagram with exactly seven nodes, using the exact stored relationship names on directed connectors. Use navy-blue headers on evidence nodes and muted teal on the approved-decision path. Upper evidence row: Claim on left, Source near middle, New source revision on right. Lower decision row: Decision on left, Task in middle-left, Person in middle-right, Team on right. Arrange Source above the gap between Decision and Task so its arrows remain uncrossed. Person and Team are Entity nodes: small secondary labels "Entity · person" and "Entity · team".
-
-Exact nodes, with optional specified smaller detail:
-Claim, detail "subject · predicate · value"
-Source, detail "document / ticket / chat"
-New source revision, detail "Source"
-Decision, detail "approved repair"
-Task, detail "follow-up"
-Person, detail "Entity · person"
-Team, detail "Entity · team"
-
-Exactly six directed edges:
-Claim -> Source, label "SUPPORTED_BY"
-New source revision -> Source, label "SUPERSEDES" (arrow must point LEFT from newer to older Source)
-Decision -> Source, label "CITES" (upward diagonal or orthogonal)
-Decision -> Task, label "CREATED"
-Task -> Person, label "ASSIGNED_TO"
-Person -> Team, label "MEMBER_OF"
-
-Use large clear labels and whitespace. Nothing may obscure arrowheads or overlap relationships.
-Below the graph place two discrete, unconnected explanatory notes, separated by a thin rule from the graph (not nodes and no connectors):
-"Ownership is a claim" with next line 'worker / owner / "nia"' and next line "The subject refers to an entity ID."
-"Context metadata" with next line "Reviewed topology hash + revision" and next line "Validated before approval."
-These are explanations; do not invent an OWNS edge or connect the notes into the graph. This is a schema showing relationships across revisions; do not label Source as active or current.
+Canvas: landscape 1600 × 1000 or similar aspect ratio.
+Title: "Customer dependencies"
+Subtitle: "INC-204 · Enrichment API"
+Panel header: "Dependency graph" with tiny blue active underline; right metadata "11 entities · 10 relationships".
+Preserve all eleven named entity boxes and ALL TEN labeled directed edges from Image 2:
+Alder -> Rich export [USES]
+Beacon -> Rich export [USES]
+Cedar -> Basic export [USES]
+Rich export -> Build rich report [IMPLEMENTED_BY]
+Basic export -> Build basic report [IMPLEMENTED_BY]
+Build rich report -> Resolve provenance [CALLS]
+Build rich report -> Export worker [RUNS_ON]
+Build basic report -> Export worker [RUNS_ON]
+Resolve provenance -> Enrichment API [RUNS_ON]
+INC-204 -> Enrichment API [OBSERVED_ON]
+Keep the readable five-column arrangement from Image 2. Show Alder and Beacon stacked in upper left, sharing Rich export; Cedar lower left through Basic export and Build basic report. Build rich report and Build basic report BOTH point into the shared Export worker. INC-204 beneath Enrichment API points UP into that API. Each arrow points to its exact target, labels sit in clear whitespace.
+Use subtle small column labels like the screenshot: "CUSTOMERS", "CAPABILITIES", "OPERATIONS", "EXECUTION", "DEPENDENCY". These are layout labels, not extra nodes.
+Color Alder, Beacon and Enrichment API with the app's muted failing palette, with tiny dots and small state words "affected", "affected", "failed". Cedar uses muted healthy palette with small state word "healthy". All other nodes neutral gray. No status pills.
+Quiet divided footer strip:
+"Impact query" / "Alder · Beacon"
+"Worker footprint" / "Alder · Beacon · Cedar".
+Wrap long node names onto two balanced lines if needed. Do not sacrifice labels, arrowheads or direction. No direct Export worker→Enrichment API edge. All content must fit with comfortable margins.
 ```
 
-## Repair algorithm — initial composition
+## evidence-graph.png
 
 ```text
-Use case: infographic-diagram.
-Asset: an accurate technical diagram embedded in the GitHub README of Rehearsal, an incident-repair simulator. Make a polished, extremely readable editorial engineering diagram, not a marketing poster. Wide landscape canvas about 2400x1500. Pure white background, generous white space, precise thin orthogonal arrow connectors, restrained rounded rectangles, no shadows, no gradients, no texture, no decorative illustrations, no 3D. Near-black large sans-serif type similar to Geist, monospaced relationship labels. Dark navy-blue for graph/context, muted teal for healthy/passing, muted coral for failures, neutral light gray for generic nodes. Body labels must be comfortably readable when displayed at 900px width. Exact spelling and exact arrow endpoints matter more than decoration. Give the heading modest size; spend most of the canvas on the diagram. Each diagram has a tiny top-left "REHEARSAL / FALKORDB" eyebrow. No extra invented text or relationships.
-Title verbatim: "A repair must earn approval"
-Subtitle verbatim: "Graph facts → isolated trials → owner approval → durable receipt"
-Create an elegant, precise numbered flowchart, about 2000x1800 or a landscape 2400x1900 canvas, readable without magnification. Use large type and a clean vertical main flow, with three equal candidate cards in a horizontal row and a narrow right margin for two stop branches. No decorative icons. Use exact short copy below, don't invent extra words.
-
-1. Blue block "Resolve FalkorDB context"
-   detail "Affected paths · worker footprint · requirements · owner"
-   Arrow down.
-2. Section "Test all three on isolated service copies"
-   Three equal cards in one row, each headed with candidate:
-   "Rollback" / "Schema mismatch" / coral "FAIL"
-   "Bypass" / "HTTP 200; required provenance missing" / coral "FAIL"
-   "Verified cache" / "Data + provenance + freshness preserved" / teal "PASS"
-   A small caption under the row says "Initial fixture: cache age 720 s; policy limit 900 s".
-   All three converge via connectors into:
-3. A gate "Every required check passes?"
-   Directly under it, compact helper text "Availability · data integrity · provenance · schema · unaffected customers · cache policy".
-   Arrow from gate to right labeled "No eligible repair" leading to a coral stop box "Abstain / escalate".
-   Arrow down labeled "Passing repair" goes to:
-4. Blue block "Create a bound proposal"
-   detail "Context + runtime + trial hashes · current owner · 2-minute expiry".
-   Arrow down to:
-5. A distinct navy-outlined gate "Owner approves; server revalidates"
-   detail "Read graph again · rerun selected trial · compare output hashes".
-   Rightward arrow labeled "Stale or failed" to coral stop box "Block; rehearse again".
-   Downward arrow labeled "Valid" to:
-6. Teal block "Apply once + save receipt"
-   detail "Atomic SQLite transaction · retries reuse the receipt".
-   Arrow down to final slim blue block "Sync decision citations + assigned task to FalkorDB"
-   detail "Idempotent graph write; retry if interrupted".
-
-Every dependency must be clear. This is not autonomous deployment: owner approval is mandatory and visibly gates applying the repair. Do not show bypass as passing just because HTTP is 200. The condition is candidate eligibility; at least one must pass, not all three candidates. No arrow from a failure stop box to apply. Give the complex gate labels enough room, no tiny type, no cramped line wraps.
+Canvas: landscape 1600 × 1000 or similar aspect ratio.
+Title: "Evidence and ownership"
+Subtitle: "Reviewed facts, source revisions and approved repairs"
+Panel header: "Evidence graph" with tiny blue active underline; right metadata "7 nodes · 6 relationships".
+Keep the exact seven nodes and six arrows from Image 2, but render EVERY node as a subtle light gray app graph node. No colored header bands. Use normal-sized medium-weight names and smaller muted details within the same flat rectangle:
+Claim / "subject · predicate · value"
+Source / "document / ticket / chat"
+New source revision / "Source"
+Decision / "approved repair"
+Task / "follow-up"
+Person / "Entity · person"
+Team / "Entity · team"
+Exact six directed relationships:
+Claim -> Source [SUPPORTED_BY]
+New source revision -> Source [SUPERSEDES], points LEFT from newer source to older source.
+Decision -> Source [CITES]
+Decision -> Task [CREATED]
+Task -> Person [ASSIGNED_TO]
+Person -> Team [MEMBER_OF]
+Preserve the spacious two-row layout: Claim, Source, New source revision in upper row; Decision, Task, Person, Team in lower row. A clear CITES connector rises from Decision to Source. Gentle curved connector or clean orthogonal routing like the app; arrow tips small, visible, precise. Do not omit or reverse any edge.
+Use only tiny muted green status dots on Decision and Task; keep their node background neutral. No filled green blocks.
+Bottom annotation strip beneath a thin divider, two columns with a subtle vertical rule:
+"Ownership is a claim"
+'worker / owner / "nia"'
+"Subject refers to an entity ID."
+and
+"Context metadata"
+"Reviewed topology hash + revision"
+"Validated before approval."
+These annotations are NOT extra graph nodes. No invented OWNS relationship. Keep Source generic across revisions, do not label it active/current. Typography and spacing must look like the app's output-diff and graph panels.
 ```
 
-## Repair algorithm — final layout edit
-
-The initial algorithm image was supplied as the edit target. This edit produces the committed `repair-algorithm.png`.
+## repair-algorithm.png
 
 ```text
-Use case: infographic-diagram. Edit the supplied Rehearsal workflow diagram to improve readability in a README. Recompose it as a PORTRAIT 3:4 diagram, about 1200 pixels wide by 1600 pixels tall. This is an exact technical workflow, not an illustration. Preserve the white background, navy/blue, teal pass states and coral stop states, simple sans-serif and monospaced details, precise arrows and seven numbered stages. Use flat fills. Make all body text LARGE (at least 24px on a 1200px-wide canvas) and give wrapped lines comfortable leading. Reduce the blank left margin so the main flow occupies about 75% of the image width; reserve 20% on the right for the two stop boxes. Heading modest, two lines if needed.
-
-Exact content, in order:
-Eyebrow: "REHEARSAL / FALKORDB"
-Title: "A repair must earn approval"
-Subtitle: "Graph facts → trials → owner approval → receipt"
-
-1. "Resolve FalkorDB context"
+Canvas: PORTRAIT 1200 × 1440 (5:6), a compact readable technical workflow.
+Title: "Repair verification"
+Subtitle: "Graph context → trials → approval → receipt"
+Panel header: "Execution flow" with tiny blue active underline; right metadata "Owner approval required".
+Retain the seven-step flow and two stop branches from Image 2, but make it look like a refined app activity / verification panel. Narrow muted monospaced stage indices "01"..."07"; never big colored number blocks. Seven aligned flat WHITE rows/blocks with fine gray borders and 2px corners, soft thin gray connectors down the main lane. Right margin for the two small stop boxes. No blue-filled sections. Only the owner-approval row may have a narrow blue 2px left rule. Body text at least 21–23px on 1200px canvas; title around 34px, row headings about 25px. Keep compact readable proportions, fine white gutters.
+Exact content and flow:
+01 "Resolve graph context"
    "Dependencies · requirements · current owner"
-   Down arrow to 2.
-
-2. "Test all three on isolated copies"
-   Three cards across the main-flow width:
-   "Rollback" / "Schema mismatch" / "FAIL"
-   "Bypass" / "Required provenance missing" / "FAIL"
-   "Verified cache" / "Data + provenance preserved" / "PASS"
-   Below cards, caption: "Initial fixture: cache 720 s; policy 900 s".
-   Three arrows converge into 3.
-
-3. Change gate wording to EXACTLY "Any repair passes every check?"
-   Helper: "Data · availability · provenance · schema · cache policy"
-   Right arrow labeled "None" to coral terminal "Abstain / escalate".
-   Down arrow labeled "Passing repair" to 4.
-   Meaning: every check must pass for a candidate; we need at least one eligible candidate, NOT all three candidates to pass.
-
-4. "Create a bound proposal"
+   Down arrow to 02.
+02 "Rehearse all three repairs"
+   Render a compact TABLE, like the app verification panel, with three divided rows, NOT three oversized cards:
+   "Rollback" | "Schema mismatch" | "Fail"
+   "Bypass" | "Required provenance missing" | "Fail"
+   "Verified cache" | "Data + provenance preserved" | "Pass"
+   Fail appears as a small muted rust dot plus text. Pass appears as a small muted green dot plus text. The table is white/very faint gray, NO saturated filled status banners.
+   Small footer within this stage: "Initial fixture: cache 720 s · policy 900 s"
+   Down arrow to 03.
+03 "Any repair passes every check?"
+   "Data · availability · provenance · schema · cache policy"
+   Right arrow labeled "None" to small very pale rust terminal "Abstain / escalate".
+   Down arrow labeled "Passing repair" to 04.
+04 "Create a bound proposal"
    "Context + runtime + trial hashes"
    "Current owner · expires in 2 minutes"
-   Down arrow to 5.
-
-5. "Owner approves; server revalidates"
+   Down arrow to 05.
+05 "Owner approves; server revalidates"
    "Reread graph · rerun trial · compare outputs"
-   Right arrow labeled "Stale / failed" to coral terminal "Block; rehearse again".
-   Down arrow labeled "Valid" to 6.
-
-6. "Apply once + save receipt"
+   Right arrow labeled "Stale / failed" to small very pale rust terminal "Block; rehearse again".
+   Down arrow labeled "Valid" to 06.
+06 "Apply once + save receipt"
    "Atomic SQLite transaction"
    "Retries reuse the receipt"
-   Down arrow to 7.
-
-7. "Sync evidence to FalkorDB"
+   Down arrow to 07.
+07 "Sync evidence to FalkorDB"
    "Decision citations + assigned follow-up"
    "Idempotent write; retry if interrupted"
-
-Do not omit a stage, misdirect an arrow, or let text overlap. Neither failure branch may connect to application of a repair. Keep each failure box aligned to its actual gate. The two-minute bound and human owner gate must be prominent. All seven stages must fit within the image without clipping. Preserve the original meaning while replacing text with the exact concise copy above.
+No failure terminal connects to application. Approval must gate applying a change. Preserve the conditional branch semantics. Give all short lines room; allow two-line wrap where needed instead of shrinking text. At the bottom a quiet slim status strip: "FalkorDB context · isolated HTTP trials · durable receipt".
 ```
