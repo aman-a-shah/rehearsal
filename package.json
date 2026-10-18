@@ -9,6 +9,8 @@
     "test": ".venv/bin/python -m pytest tests -q",
     "test:e2e": "node scripts/check.mjs",
     "test:live": "node scripts/check-live.mjs",
-    "screenshots": "node scripts/screenshots.mjs"
+    "screenshots": "node scripts/screenshots.mjs",
+    "demo:record": "node scripts/record-demo.mjs",
+    "demo:export": ".venv/bin/python scripts/export-demo.py"
   }
 }

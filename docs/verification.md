@@ -1,5 +1,17 @@
 # Verification record
 
+## October 18 demo recording and container
+
+The repeatable Chrome capture completed two real Backboard investigations through `anthropic` / `claude-sonnet-4-6`. Under the initial policy, rollback and bypass failed, verified cache passed, owner approval restored all three exports, and Backboard confirmed the memory save. After accepting a 600-second graph policy, the second investigation tested all three repairs and stopped without a proposal. Both used three provider responses. No browser page errors occurred.
+
+The recording also shows the executed Cypher, Alder's source agreement, owner approval, recovery receipt, accepted policy revision, and opposite example results at 900 and 901 seconds. The exported H.264 MP4 is 193.68 seconds at 1920 × 1080 and 25 fps, with optional English subtitles and a separate narration script. Footage remains at its original speed and has no voice track. The local packet is `artifacts/submission/rehearsal-graph-hacks.zip`; it has not been publicly uploaded.
+
+The Docker image built successfully for Linux amd64 and ran under Docker Desktop on the macOS arm64 host. FastAPI and embedded FalkorDB ran as UID 10001. Integration checks verified real graph health, frontend serving, secure session-cookie attributes, denied public shared writes and external MCP, exact-boundary examples, redacted validation errors, untrusted-host rejection, and simulation throttling despite changed forwarding headers. A replacement image retained the persistent usage counter; a subsequent restart retained both the accepted 600-second graph policy at context revision 2 and that counter. No provider key was installed in the test container.
+
+The production-launcher and existing security suites passed together: **27 tests in 36.28 seconds**. The launcher rejects missing/insecure origins, disabled public mode, invalid ports, and wildcard proxy trust, including a wildcard mixed into an address list. The container entrypoint also rejected a normalized path escaping `/data/rehearsal`. A scoped scan found no configured credential values in tracked or unignored project files. The existing Starlette test-client deprecation warning remained.
+
+These container checks were local. No internet-facing deployment, public video upload, or event-form submission has been completed. See the [deployment guide](deployment.md), [recording workflow](demo.md#repeatable-browser-capture), and [submission draft](submission.md).
+
 ## October 18 submission checks
 
 The updated build and 63 distinct backend tests passed across the full run and focused reruns. The full run initially passed 58 of 59 tests; the boundary-input test encountered the new throttle before reaching validation. That test now isolates input validation from throttling and passed on rerun. Four additional security cases brought the final security suite to 13 passing tests in 38.13 seconds.
@@ -72,7 +84,7 @@ Local evidence files under `artifacts/live-backboard/` include `approval.json`, 
 - Live verification covered Claude Sonnet 4.6 through Backboard and this one synthetic incident. Other providers, models, failure scenarios, and broad model accuracy were not evaluated. Cost reporting in message responses remained unavailable; account billing was checked separately.
 - The optional external FalkorDB configuration was not exercised; the suite uses the embedded engine.
 - Python verification used an already-provisioned environment. The complete setup script was not tested on an empty machine.
-- The suite was not run on Windows, Linux, Safari, or Firefox.
+- The full suite was not run on Windows or Linux, or in Safari or Firefox. The October 18 container integration checks above used Linux amd64.
 - The passing backend run emitted one dependency deprecation warning about Starlette's HTTPX test client. It did not affect the results.
 
 Reproduce the checks with the commands in the [development guide](development.md#tests). `REHEARSAL_BASE_URL` can point the browser suite at a different local serving configuration. Browser checks reset synthetic workspace state.

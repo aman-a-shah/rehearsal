@@ -132,6 +132,6 @@ npm run build
 npm test
 ```
 
-See [development and browser tests](docs/development.md), the [demo video plan](docs/demo.md), and [verification results](docs/verification.md).
+See [development and browser tests](docs/development.md), [container deployment](docs/deployment.md), the [demo video plan](docs/demo.md), and [verification results](docs/verification.md).
 
 This is a local simulator with fictional company data and three predefined repairs. Demo identities are not production authentication. The project uses AI-assisted code.

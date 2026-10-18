@@ -52,4 +52,24 @@ Each example executes the existing verifier and exposes comparison rows, HTTP tr
 
 Export an H.264 MP4 at 1080p with legible narration/captions. Upload the completed recording to a link judges can open without signing in, and put that link in the README and submission form. Check both video and repository from a signed-out browser. This document is the recording plan; it is not a recorded demo.
 
+### Repeatable browser capture
+
+`npm run demo:record -- live` records the actual workflow in Chrome at 1536 × 864. It resets a local demo workspace, runs two paid Backboard investigations, verifies the first recovery and memory save, changes the authoritative graph policy, and verifies that the second run creates no proposal. Operator authentication happens before the recorded page opens.
+
+Start a separate API-only server with its own state directory and configured operator/provider credentials. Then record against its loopback URL:
+
+```sh
+REHEARSAL_BASE_URL=http://127.0.0.1:8785 npm run demo:record -- live
+```
+
+The script saves footage, execution evidence, and a timed narration script under `artifacts/demo/`. Use `guided` for keyless practice. `REHEARSAL_RECORD_PACE=0.1` shortens practice holds; accelerated practice takes cannot be exported as submission footage.
+
+With FFmpeg installed, export a completed take:
+
+```sh
+npm run demo:export -- artifacts/demo/live-RECORDING_TIMESTAMP
+```
+
+This produces `rehearsal-demo.mp4` at 1920 × 1080, with optional English subtitles, plus a separate `captions.srt`. The footage stays at its original speed. It has no voice track; `narration.txt` provides the script for recording one. Keep these large files out of Git and upload the final video separately.
+
 Prior live results are in [verification](verification.md#live-backboard-verification). The project history is explained in [rebuild notes](rebuild.md).

@@ -1,0 +1,19 @@
+# Send only the files needed to build and run the application.
+**
+!Dockerfile
+!requirements.lock
+!server/
+!server/**
+!scripts/
+!scripts/container-entrypoint.sh
+!web/
+!web/**
+**/__pycache__/
+**/*.pyc
+**/.env
+**/.env.*
+**/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/e2e/
