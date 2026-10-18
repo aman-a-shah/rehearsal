@@ -37,33 +37,13 @@ The agent calls four MCP tools: `inspect_context`, `read_source`, `rehearse_repa
 
 ### Nodes and relationships
 
-The dependency nodes are stored as `Entity` nodes, with a `kind` of `customer`, `capability`, `operation`, or `service`:
+The dependency map uses `Entity` nodes with a `kind` of `customer`, `capability`, `operation`, `service`, or `incident`. Arrows show stored relationships:
 
-```mermaid
-flowchart LR
-    Alder -->|USES| Rich[Rich export]
-    Beacon -->|USES| Rich
-    Cedar -->|USES| Basic[Basic export]
-    Rich -->|IMPLEMENTED_BY| BuildRich[Build rich report]
-    Basic -->|IMPLEMENTED_BY| BuildBasic[Build basic report]
-    BuildRich -->|CALLS| Resolve[Resolve provenance]
-    BuildRich -->|RUNS_ON| Worker[Export worker]
-    BuildBasic -->|RUNS_ON| Worker
-    Resolve -->|RUNS_ON| Enrichment[Enrichment API]
-    Incident[INC-204] -->|OBSERVED_ON| Enrichment
-```
+![Dependency graph: Alder and Beacon use rich exports, which call provenance resolution on the failing Enrichment API. Cedar uses basic exports. Both export operations run on the shared Export worker; INC-204 is observed on Enrichment API.](docs/diagrams/dependency-graph.png)
 
 Company evidence and completed decisions use these stored relationships:
 
-```mermaid
-flowchart LR
-    Claim[Claim: reviewed fact] -->|SUPPORTED_BY| Source[Source: document, ticket, or chat revision]
-    NewSource[Source: replacement revision] -->|SUPERSEDES| Source
-    Decision[Decision: approved repair] -->|CITES| Source
-    Decision -->|CREATED| Task[Task: follow-up]
-    Task -->|ASSIGNED_TO| Person[Entity: person]
-    Person -->|MEMBER_OF| Team[Entity: team]
-```
+![Evidence graph: Claim is SUPPORTED_BY Source; a new source revision SUPERSEDES an older one. Decision CITES Source and CREATED Task. Task is ASSIGNED_TO a person who is MEMBER_OF a team. Ownership is a claim property; Context stores the reviewed topology hash and revision.](docs/diagrams/evidence-graph.png)
 
 `Claim` stores `subject`, `predicate`, and a JSON-encoded `value`; for example, `alder / requires_provenance / true` and `worker / owner / "nia"`. Subjects refer to entity IDs by property. Active claims must point to a current source; authoritative sources supply the required policy and ownership facts. A `Context` node stores the reviewed topology hash and revision. See the [seed records](server/seed.py) and [graph implementation](server/graph.py).
 
@@ -108,6 +88,8 @@ Implemented in [server/graph.py](server/graph.py):
 | `record_decision(receipt)` | Uses `MERGE` to store a decision, source citations, and an assigned follow-up task without duplicating them on retry. |
 
 ### Algorithms and execution
+
+![Repair algorithm: resolve graph context, test all three repairs on isolated copies, and propose only a candidate that passes every check. In the initial fixture only verified cache passes. The current owner must approve within two minutes; the server revalidates before an atomic apply and receipt, then synchronizes evidence to FalkorDB. No eligible repair causes abstention; stale evidence blocks approval.](docs/diagrams/repair-algorithm.png)
 
 1. **Resolve context.** Traverse at most four `CALLS` edges to the failing service. Deduplicate affected customers. Query the worker footprint separately so rollback also checks Cedar. Required authoritative facts must each resolve to one value.
 2. **Evaluate candidates.** Back up SQLite into a temporary database for each repair, change its configuration, and call the actual ASGI export handlers. Check availability, original account/amount/currency, required provenance, schema, unaffected customers, and `0 ≤ cache_age ≤ policy_limit`. Eligibility is the conjunction of all checks.
