@@ -2,7 +2,11 @@
 
 Rehearsal tests incident repairs against customer requirements. A Backboard agent reads dependencies and reviewed facts from FalkorDB, runs three repairs on isolated service copies, and proposes a passing option for owner approval.
 
-![Bypass trial: Alder returns HTTP 200 but fails its provenance requirement. The dependency map, output diff, and failed check appear together.](docs/screenshots/workbench.png)
+<p align="center">
+  <a href="docs/screenshots/workbench.png">
+    <img src="docs/screenshots/workbench.png" width="900" alt="Bypass trial: Alder returns HTTP 200 but fails its provenance requirement. The dependency map, output diff, and failed check appear together.">
+  </a>
+</p>
 
 ## Try it
 
@@ -39,15 +43,19 @@ The agent calls four MCP tools: `inspect_context`, `read_source`, `rehearse_repa
 
 The dependency map uses `Entity` nodes with a `kind` of `customer`, `capability`, `operation`, `service`, or `incident`. Arrows show stored relationships:
 
-<a href="docs/diagrams/dependency-graph.png">
-  <img src="docs/diagrams/dependency-graph.png" width="780" alt="Dependency graph: Alder and Beacon use rich exports, which call provenance resolution on the failing Enrichment API. Cedar uses basic exports. Both export operations run on the shared Export worker; INC-204 is observed on Enrichment API.">
-</a>
+<p align="center">
+  <a href="docs/diagrams/dependency-graph.png">
+    <img src="docs/diagrams/dependency-graph.png" width="620" alt="Dependency graph: Alder and Beacon use rich exports, which call provenance resolution on the failing Enrichment API. Cedar uses basic exports. Both export operations run on the shared Export worker; INC-204 is observed on Enrichment API.">
+  </a>
+</p>
 
 Company evidence and completed decisions use these stored relationships:
 
-<a href="docs/diagrams/evidence-graph.png">
-  <img src="docs/diagrams/evidence-graph.png" width="780" alt="Evidence graph: Claim is SUPPORTED_BY Source; a new source revision SUPERSEDES an older one. Decision CITES Source and CREATED Task. Task is ASSIGNED_TO a person who is MEMBER_OF a team. Ownership is a claim property; Context stores the reviewed topology hash and revision.">
-</a>
+<p align="center">
+  <a href="docs/diagrams/evidence-graph.png">
+    <img src="docs/diagrams/evidence-graph.png" width="620" alt="Evidence graph: Claim is SUPPORTED_BY Source; a new source revision SUPERSEDES an older one. Decision CITES Source and CREATED Task. Task is ASSIGNED_TO a person who is MEMBER_OF a team. Ownership is a claim property; Context stores the reviewed topology hash and revision.">
+  </a>
+</p>
 
 `Claim` stores `subject`, `predicate`, and a JSON-encoded `value`; for example, `alder / requires_provenance / true` and `worker / owner / "nia"`. Subjects refer to entity IDs by property. Active claims must point to a current source; authoritative sources supply the required policy and ownership facts. A `Context` node stores the reviewed topology hash and revision. See the [seed records](server/seed.py) and [graph implementation](server/graph.py).
 
@@ -93,9 +101,11 @@ Implemented in [server/graph.py](server/graph.py):
 
 ### Algorithms and execution
 
-<a href="docs/diagrams/repair-algorithm.png">
-  <img src="docs/diagrams/repair-algorithm.png" width="640" alt="Repair algorithm: resolve graph context, test all three repairs on isolated copies, and propose only a candidate that passes every check. In the initial fixture only verified cache passes. The current owner must approve within two minutes; the server revalidates before an atomic apply and receipt, then synchronizes evidence to FalkorDB. No eligible repair causes abstention; stale evidence blocks approval.">
-</a>
+<p align="center">
+  <a href="docs/diagrams/repair-algorithm.png">
+    <img src="docs/diagrams/repair-algorithm.png" width="460" alt="Repair algorithm: resolve graph context, test all three repairs on isolated copies, and propose only a candidate that passes every check. In the initial fixture only verified cache passes. The current owner must approve within two minutes; the server revalidates before an atomic apply and receipt, then synchronizes evidence to FalkorDB. No eligible repair causes abstention; stale evidence blocks approval.">
+  </a>
+</p>
 
 1. **Resolve context.** Traverse at most four `CALLS` edges to the failing service. Deduplicate affected customers. Query the worker footprint separately so rollback also checks Cedar. Required authoritative facts must each resolve to one value.
 2. **Evaluate candidates.** Back up SQLite into a temporary database for each repair, change its configuration, and call the actual ASGI export handlers. Check availability, original account/amount/currency, required provenance, schema, unaffected customers, and `0 ≤ cache_age ≤ policy_limit`. Eligibility is the conjunction of all checks.
