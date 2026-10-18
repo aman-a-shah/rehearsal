@@ -2,6 +2,8 @@
 
 These controls apply to `/api/code`. The separate fictional company workspace retains its [operator controls](security.md).
 
+The optional judge preview adds an expiring invitation to both workflows. An invitation in the URL fragment is exchanged for a signed Secure, HttpOnly cookie, then removed from the address bar. Anonymous requests cannot import, run, or read repository data. The shared invitation does not grant access to another visitor's workspace. Health/status remain public, invitation attempts are limited, and responses discourage search indexing.
+
 - **Accounts:** random session tokens are hashed in SQLite. Cookies are HttpOnly and SameSite=Lax, and Secure in public mode. OAuth state expires in ten minutes and is bound to the originating browser. PKCE protects the code exchange. GitHub tokens and OAuth verifier records are encrypted with a server-held Fernet key.
 - **Tenant isolation:** project, file, run, cancellation, download, deletion, and publication endpoints check the authenticated workspace. Unknown and foreign records return 404. Each snapshot has its own FalkorDB graph. GitHub credentials never enter another workspace, a model, or a sandbox.
 - **Import:** repository URLs are restricted to GitHub. API requests use fixed endpoints; bounded archive redirects allow only GitHub's API and codeload hosts. Authorization headers are removed on codeload redirects. Branches resolve to immutable SHAs. Archive paths, links, duplicate files, expanded size, and file count are checked. Archives are read into validated data, never extracted on the host.
@@ -26,7 +28,9 @@ These controls apply to `/api/code`. The separate fictional company workspace re
 | ZIP bodies | 12 MiB compressed; 24 MiB expanded |
 | Queued/running investigations | 4 globally; 1/account; one executor |
 
-SQLite reserves usage before paid calls. Failures consume reservations. Guest-cookie replacement does not reset peer/global limits; deleting a project does not erase quotas. Limits survive restarts. These are request counts, not a dollar ceiling. Use independent account billing controls. The guided demo has a separate provider quota, so the account budget must cover both workflows.
+SQLite reserves usage before paid calls. Failures consume reservations. Guest-cookie replacement does not reset peer/global limits; deleting a project does not erase quotas. Limits survive restarts when the API uses persistent storage. These are request counts, not a dollar ceiling. Use independent account billing controls. The guided demo has a separate provider quota, so the account budget must cover both workflows.
+
+The free judge deployment allows up to four runs per guest and twelve per ingress peer, still bounded by the shared four/hour, twelve/day, and model/sandbox limits above. Its ephemeral filesystem loses usage counters and workspace records on host sleep/restart. The invitation and its fixed expiry remain configured on the host. This restricted preview is not a deployment with durable billing controls or durable user data.
 
 Peer limits use verified socket addresses. Without explicit proxy trust, visitors behind an ingress can share one peer bucket. Configure the host's documented proxy networks after verifying ingress behavior. Do not enable wildcard proxy trust.
 

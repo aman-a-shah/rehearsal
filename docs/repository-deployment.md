@@ -1,6 +1,6 @@
 # Repository deployment
 
-The website and API are independently deployable. The API needs persistent storage and a long-lived worker because a rehearsal can outlast an HTTP request. Closing the browser does not cancel a run.
+The website and API are independently deployable. The API uses a long-lived worker because a rehearsal can outlast an HTTP request. Persistent storage preserves accounts and investigations across restarts; the temporary judge preview below uses disposable storage.
 
 ## Free temporary judge preview
 
@@ -10,7 +10,7 @@ Set `REHEARSAL_DEMO_INVITE` to a random 48+ character value, `REHEARSAL_DEMO_EXP
 
 Public GitHub URLs, ZIP uploads, and three built-in examples work without GitHub OAuth registration. Guests can download verified patches. The demo permits four runs per guest, with shared hourly, daily, model-call, and sandbox limits. GitHub sign-in and draft PR publication remain optional additional configuration.
 
-Render's free service sleeps after 15 idle minutes, takes roughly a minute to wake, and discards local source, sessions, graph data, run history, and quota counters on sleep/restart. The invitation cookie remains valid, but visitors start a new workspace. The page retries during startup and tells visitors to download patches before leaving. Keep the invitation limited to judges; this configuration is temporary and does not provide durable storage or durable cross-restart usage accounting. See [Render's documented limits](https://render.com/docs/free).
+Render's free service sleeps after 15 idle minutes, takes roughly a minute to wake, and discards local source, sessions, graph data, run history, and quota counters on sleep/restart. The invitation cookie remains valid, but visitors start a new workspace. Keep the page open until the run finishes and download patches before leaving. The page retries during startup. Keep the invitation limited to judges; this configuration is temporary and does not provide durable storage or durable cross-restart usage accounting. See [Render's documented limits](https://render.com/docs/free).
 
 To end the preview, suspend/delete the free service or let the invitation expire. Do not upgrade it or attach a disk for the temporary preview.
 

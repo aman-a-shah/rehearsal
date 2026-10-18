@@ -1347,8 +1347,8 @@ export default function Repositories() {
                   stay intact. Passing repairs are repeated in a fresh sandbox.
                 </p>
                 <p>
-                  Source context is sent to the repair model. Nothing is pushed
-                  until you review and approve a draft pull request.
+                  Source context is sent to the repair model. Review the diff
+                  and test evidence before applying a patch.
                 </p>
                 {!session.sandbox.available && (
                   <p className="repo-bad">
@@ -1477,12 +1477,12 @@ function Review({
                   : "Create draft pull request"}
               </button>
             </>
-          ) : (
+          ) : session.github_configured ? (
             <p>
               Import with a GitHub account that has write access to open a draft
               pull request directly.
             </p>
-          )}
+          ) : null}
         </>
       )}
     </div>
