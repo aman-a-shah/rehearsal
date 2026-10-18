@@ -1,5 +1,13 @@
 # Verification record
 
+## Persistent graph and compact workspace — October 18
+
+The repository header is now one row. An unboxed dependency map stays above Activity, Tests, Patch, and Graph evidence; only the lower workbench scrolls. The full file map is stable when selecting nodes, with only the selected file's direct connections drawn through the gutters. A separate File connections view isolates its importers and imports. Run/stop controls remain available when the incident brief is collapsed.
+
+Local browser verification used both previously completed real example runs. It checked all 28 Python and 25 Node code/test nodes, confirmed each selection renders only its incident edges, and sampled every rendered path to check that connections do not cross unrelated file cards. Source inspection, zoom, fit, expansion, all evidence tabs, internal scrolling, and 1440px, 1280px, and 390px layouts passed. Selected automated Axe WCAG A/AA scans reported zero violations on both desktop and mobile; no JavaScript errors were observed. Screenshots were visually inspected.
+
+The repeatable `scripts/check-repositories.mjs` also imports a real example and exercises run start, polling, test output, patch review, and incident toggles with staged UI responses. It asserts the graph remains in the viewport and preserves selection and pan/zoom. Those staged responses test UI behavior, not repair quality; no new model calls were needed for this frontend change. The real model/sandbox evidence below remains the basis for the example repair results.
+
 ## Substantial examples and repository workbench — October 18
 
 Both new examples were repaired through the actual local API, FalkorDB context selection, Backboard model generation, and Vercel microVM execution. Source fixes were generated during the run; the app includes no precomputed repairs.

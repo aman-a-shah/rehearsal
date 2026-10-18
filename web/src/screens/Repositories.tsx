@@ -14,8 +14,9 @@ import {
   Loader2,
   Play,
   RotateCw,
-  PanelRightClose,
-  PanelRightOpen,
+  PanelLeftClose,
+  PanelLeftOpen,
+  MoreHorizontal,
   Square,
   Terminal,
   Upload,
@@ -147,7 +148,7 @@ export default function Repositories() {
   const [setup, setSetup] = useState("");
   const [test, setTest] = useState("");
   const [regression, setRegression] = useState(true);
-  const [tab, setTab] = useState("graph");
+  const [tab, setTab] = useState("overview");
   const [incidentOpen, setIncidentOpen] = useState(true);
   const [candidateId, setCandidateId] = useState("");
   const [reviewed, setReviewed] = useState(false);
@@ -206,7 +207,7 @@ export default function Repositories() {
     setIncident(project.incident || "");
     setSetup(project.setup_command);
     setTest(project.test_command);
-    setTab("graph");
+    setTab("overview");
     setIncidentOpen(true);
     setRunId("");
     setCandidateId("");
@@ -231,7 +232,7 @@ export default function Repositories() {
       setTab((current) => (current === "activity" ? "overview" : current));
       setIncidentOpen(false);
     }
-  }, [run?.status]);
+  }, [run?.status, run?.id]);
 
   async function act(name: string, operation: () => Promise<void>) {
     if (busy) return;
@@ -286,6 +287,7 @@ export default function Repositories() {
       setRunId(result.id);
       setCandidateId("");
       setTab("activity");
+      setIncidentOpen(false);
     });
   }
   async function upload(zip: File) {
@@ -322,49 +324,51 @@ export default function Repositories() {
       >
         Skip to content
       </a>
-      <header className="repo-header">
-        <a className="brand" href="#repositories" aria-label="Rehearsal home">
-          rehearsal
-          <span className="repo-brand-dot" />
-        </a>
-        <nav aria-label="Main navigation">
-          <a href="#repositories" aria-current="page">
-            Repositories
+      {!project && (
+        <header className="repo-header">
+          <a className="brand" href="#repositories" aria-label="Rehearsal home">
+            rehearsal
+            <span className="repo-brand-dot" />
           </a>
-          <a href="#examples">Guided example</a>
-          <a
-            href="https://github.com/aman-a-shah/rehearsal"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Source <ExternalLink size={12} />
-          </a>
-        </nav>
-        <div className="repo-account">
-          {session?.user ? (
-            <>
-              <span className="repo-avatar">
-                {session.user.github ? <Github size={14} /> : "G"}
-              </span>
-              <span>{session.user.login}</span>
-              <button
-                title="Sign out"
-                onClick={() =>
-                  void act("logout", async () => {
-                    await api("/auth/logout", {});
-                    await refresh();
-                    window.location.hash = "repositories";
-                  })
-                }
-              >
-                Sign out
-              </button>
-            </>
-          ) : (
-            <span className="repo-status-dot">Private workspaces</span>
-          )}
-        </div>
-      </header>
+          <nav aria-label="Main navigation">
+            <a href="#repositories" aria-current="page">
+              Repositories
+            </a>
+            <a href="#examples">Guided example</a>
+            <a
+              href="https://github.com/aman-a-shah/rehearsal"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Source <ExternalLink size={12} />
+            </a>
+          </nav>
+          <div className="repo-account">
+            {session?.user ? (
+              <>
+                <span className="repo-avatar">
+                  {session.user.github ? <Github size={14} /> : "G"}
+                </span>
+                <span>{session.user.login}</span>
+                <button
+                  title="Sign out"
+                  onClick={() =>
+                    void act("logout", async () => {
+                      await api("/auth/logout", {});
+                      await refresh();
+                      window.location.hash = "repositories";
+                    })
+                  }
+                >
+                  Sign out
+                </button>
+              </>
+            ) : (
+              <span className="repo-status-dot">Private workspaces</span>
+            )}
+          </div>
+        </header>
+      )}
       {error && (
         <div className="repo-error" role="alert">
           <span>{error}</span>
@@ -722,56 +726,24 @@ export default function Repositories() {
         </main>
       ) : (
         <main className="repo-workspace" id="repo-main" tabIndex={-1}>
-          <div className="repo-workspace-heading">
-            <div>
-              <a href="#repositories" className="repo-back">
-                <ArrowLeft size={13} /> Repositories
-              </a>
-              <h1>{project.name}</h1>
-              <div className="repo-project-meta">
-                <span>
-                  <GitBranch size={13} />
-                  {project.branch || "Snapshot"}
-                </span>
-                <code>
-                  {project.sha?.slice(0, 10) || project.digest.slice(0, 10)}
-                </code>
-                <span>
-                  {project.runtime === "python"
-                    ? "Python"
-                    : "Node.js / TypeScript"}
-                </span>
-                {project.private && <span>Private</span>}
-              </div>
-            </div>
-            <div className="repo-workspace-heading-actions">
-              <span
-                className={`repo-run-status ${run?.status === "review" ? "success" : ""}`}
-              >
-                {running && <Loader2 size={13} className="spin" />}
-                {run ? label(run.status) : "Ready to investigate"}
-              </span>
-              <button
-                className="repo-button"
-                onClick={() => void act("refresh", refresh)}
-                disabled={!!busy}
-                aria-label="Refresh workspace"
-              >
-                <RotateCw size={14} />
-              </button>
-            </div>
-          </div>
-          <div className="repo-workspace-toolbar">
-            <div className="repo-snapshot-stats">
+          <header className="repo-workspace-heading">
+            <a
+              href="#repositories"
+              className="repo-back"
+              aria-label="Back to repositories"
+              title="Back to repositories"
+            >
+              <ArrowLeft size={18} />
+            </a>
+            <h1 title={project.name}>{project.name}</h1>
+            <div className="repo-project-meta">
               <span>
-                <b>{project.file_count}</b> files
+                <GitBranch size={13} />
+                {project.branch || "Snapshot"}
               </span>
-              <span>
-                <b>{project.graph.edges.length}</b> imports
-              </span>
-              <span>
-                <b>{project.test_count}</b> test files
-              </span>
+              <code title={project.sha || project.digest}>
+                {project.sha?.slice(0, 8) || project.digest.slice(0, 8)}
+              </code>
             </div>
             <div className="repo-workspace-tools">
               {projectRuns.length > 0 && (
@@ -786,76 +758,84 @@ export default function Repositories() {
                 >
                   {projectRuns.map((r, i) => (
                     <option key={r.id} value={r.id}>
-                      Run {projectRuns.length - i} · {label(r.status)}
+                      Run {projectRuns.length - i}
                     </option>
                   ))}
                 </select>
               )}
               <details className="repo-settings">
-                <summary>Repository settings</summary>
-                <p>{project.skipped.length} files excluded during import.</p>
-                {project.skipped.length > 0 && (
-                  <button
-                    onClick={() =>
-                      setFile({
-                        path: "Excluded files",
-                        content: project.skipped.join("\n"),
-                      })
-                    }
-                  >
-                    View excluded files
-                  </button>
-                )}
-                <button onClick={() => setConfirmDelete(true)}>
-                  Delete repository
-                </button>
-                {confirmDelete && (
-                  <div>
-                    <p>Remove its source, graph, and rehearsal history?</p>
+                <summary
+                  aria-label="Repository settings"
+                  title="Repository settings"
+                >
+                  <MoreHorizontal size={18} />
+                </summary>
+                <div className="repo-settings-menu">
+                  <p>{project.skipped.length} files excluded during import.</p>
+                  {project.skipped.length > 0 && (
                     <button
-                      className="repo-delete"
-                      disabled={!!busy || running}
                       onClick={() =>
-                        void act("delete", async () => {
-                          await api(
-                            `/projects/${project.id}`,
-                            undefined,
-                            "DELETE",
-                          );
-                          await refresh();
-                          window.location.hash = "repositories";
+                        setFile({
+                          path: "Excluded files",
+                          content: project.skipped.join("\n"),
                         })
                       }
                     >
-                      Delete permanently
+                      View excluded files
                     </button>
-                    <button onClick={() => setConfirmDelete(false)}>
-                      Keep repository
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <button onClick={() => setConfirmDelete(true)}>
+                    Delete repository
+                  </button>
+                  {confirmDelete && (
+                    <div>
+                      <p>Remove its source, graph, and rehearsal history?</p>
+                      <button
+                        className="repo-delete"
+                        disabled={!!busy || running}
+                        onClick={() =>
+                          void act("delete", async () => {
+                            await api(
+                              `/projects/${project.id}`,
+                              undefined,
+                              "DELETE",
+                            );
+                            await refresh();
+                            window.location.hash = "repositories";
+                          })
+                        }
+                      >
+                        Delete permanently
+                      </button>
+                      <button onClick={() => setConfirmDelete(false)}>
+                        Keep repository
+                      </button>
+                    </div>
+                  )}
+                </div>
               </details>
               <button
-                className="repo-button"
-                aria-expanded={incidentOpen}
-                aria-controls="repo-incident-panel"
-                onClick={() => setIncidentOpen(!incidentOpen)}
+                className="repo-icon-button"
+                onClick={() => void act("refresh", refresh)}
+                disabled={!!busy}
+                aria-label="Refresh workspace"
+                title="Refresh workspace"
               >
-                {incidentOpen ? (
-                  <PanelRightClose size={15} />
-                ) : (
-                  <PanelRightOpen size={15} />
-                )}
-                {incidentOpen ? "Hide incident" : "Edit incident"}
+                <RotateCw size={15} />
               </button>
             </div>
-          </div>
-          <div
-            className={`repo-workspace-grid ${incidentOpen ? "" : "incident-collapsed"}`}
-          >
-            <div className="repo-investigation">
+          </header>
+          <RepositoryGraph
+            key={project.id}
+            graph={project.graph}
+            context={run?.context}
+            changed={Object.keys(candidate?.changes || {})}
+            onFile={(path) => void openFile(path)}
+          />
+          <section className="repo-workbench" aria-label="Rehearsal workspace">
+            <div className="repo-workbench-toolbar">
               <nav className="repo-tabs" aria-label="Investigation views">
-                {["graph", "overview", "patch", "tests", "activity"].map(
+                {["overview", "activity", "tests", "patch", "graph"].map(
                   (t) => (
                     <button
                       key={t}
@@ -873,412 +853,24 @@ export default function Repositories() {
                   ),
                 )}
               </nav>
-              <section className="repo-evidence">
-                {tab !== "graph" && run?.baseline && (
-                  <div className="repo-test-progress" aria-label="Test results">
-                    {[
-                      {
-                        title: "Original",
-                        result: run.reproduction || run.baseline,
-                      },
-                      { title: "With patch", result: candidate?.trial },
-                      {
-                        title: "Fresh repeat",
-                        result: candidate?.verification,
-                      },
-                    ].map((step) => (
-                      <div key={step.title}>
-                        <span>{step.title}</span>
-                        <strong
-                          className={
-                            step.result
-                              ? step.result.exit_code === 0
-                                ? "repo-good"
-                                : "repo-bad"
-                              : ""
-                          }
-                        >
-                          {step.result
-                            ? `${step.result.exit_code === 0 ? "Passed" : "Failed"} · ${step.result.test_count ?? "—"} tests`
-                            : "Pending"}
-                        </strong>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {tab === "overview" &&
-                  (!run ? (
-                    <div className="repo-before-run">
-                      <div className="repo-outline-icon">
-                        <Code2 size={25} />
-                      </div>
-                      <h2>
-                        The source is indexed.
-                        <br />
-                        Now, tell us what’s broken.
-                      </h2>
-                      <p>
-                        Describe the failure and check the commands on the
-                        right. Rehearsal will reproduce it and test proposed
-                        repairs in separate sandboxes.
-                      </p>
-                      <div>
-                        <span>
-                          <Check size={13} /> Exact snapshot saved
-                        </span>
-                        <span>
-                          <Check size={13} /> Dependency graph built
-                        </span>
-                        <span>
-                          <Check size={13} /> {project.test_count} test files
-                          found
-                        </span>
-                      </div>
-                    </div>
+              <div className="repo-workbench-actions">
+                <button
+                  className="repo-button repo-incident-toggle"
+                  aria-expanded={incidentOpen}
+                  aria-controls="repo-incident-panel"
+                  onClick={() => setIncidentOpen(!incidentOpen)}
+                >
+                  {incidentOpen ? (
+                    <PanelLeftClose size={15} />
                   ) : (
-                    <>
-                      <div className="repo-evidence-intro">
-                        <div className="repo-section-kicker">
-                          {label(run.status)}
-                        </div>
-                        <h2>
-                          {run.status === "review"
-                            ? "A tested patch is ready for your review."
-                            : running
-                              ? "Following the failure through your code."
-                              : run.message || "Review the investigation."}
-                        </h2>
-                        <p>
-                          {run.diagnosis ||
-                            run.message ||
-                            "Commands, graph queries, and generated changes will appear as each step completes."}
-                        </p>
-                      </div>
-                      {run.candidates.map((c) => (
-                        <button
-                          key={c.id}
-                          className={`repo-candidate ${c.id === run.recommended ? "recommended" : ""}`}
-                          onClick={() => {
-                            setCandidateId(c.id);
-                            setTab("patch");
-                          }}
-                        >
-                          <span className="repo-candidate-number">0{c.id}</span>
-                          <span>
-                            <strong>{c.title}</strong>
-                            <small>
-                              {label(c.status)}
-                              {c.changes
-                                ? ` · ${Object.keys(c.changes).length} files`
-                                : ""}
-                            </small>
-                          </span>
-                          <ArrowRight size={15} />
-                        </button>
-                      ))}
-                      {run.context && (
-                        <div className="repo-impact-summary">
-                          <h3>What the graph connected</h3>
-                          <p>
-                            {run.context.files.length} files informed the
-                            investigation. {run.context.affected_tests.length}{" "}
-                            test files depend on the selected modules.
-                          </p>
-                          {run.context.owners.length > 0 && (
-                            <p>
-                              Owners:{" "}
-                              {[
-                                ...new Set(
-                                  run.context.owners.map((o) => o.name),
-                                ),
-                              ].join(", ")}
-                            </p>
-                          )}
-                        </div>
-                      )}
-                      <p className="repo-evidence-limit">
-                        A passing run verifies the configured tests. Review
-                        behavior, security, and production requirements before
-                        merging.
-                      </p>
-                    </>
-                  ))}
-                {tab === "patch" &&
-                  (candidate ? (
-                    <>
-                      <div className="repo-candidate-tabs">
-                        {run.candidates.map((c) => (
-                          <button
-                            key={c.id}
-                            className={candidate.id === c.id ? "selected" : ""}
-                            onClick={() => setCandidateId(c.id)}
-                          >
-                            0{c.id} {c.title}
-                            <span>{label(c.status)}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <div className="repo-patch-intro">
-                        <div className="repo-patch-heading">
-                          <span className="repo-section-kicker">
-                            Proposed fix ·{" "}
-                            {Object.keys(candidate.changes || {}).length}{" "}
-                            changed files · not applied
-                          </span>
-                          {candidate.status === "verified" && (
-                            <a
-                              className="repo-button primary"
-                              href={`/api/code/runs/${run.id}/patch/${candidate.id}`}
-                              download
-                            >
-                              <ArrowDownToLine size={14} /> Download patch
-                            </a>
-                          )}
-                        </div>
-                        <h2>{candidate.title}</h2>
-                        <p>{candidate.reason || candidate.message}</p>
-                        {candidate.message && candidate.reason && (
-                          <p className="repo-bad">{candidate.message}</p>
-                        )}
-                      </div>
-                      {candidate.patch && <Diff patch={candidate.patch} />}
-                      <Review
-                        candidate={candidate}
-                        run={run}
-                        project={project}
-                        session={session}
-                        reviewed={reviewed}
-                        setReviewed={setReviewed}
-                        busy={busy}
-                        publish={() =>
-                          void act("publish", async () => {
-                            await api(`/runs/${run.id}/publish`, {
-                              candidate_id: candidate.id,
-                              digest: candidate.review_digest,
-                            });
-                            await refresh();
-                          })
-                        }
-                      />
-                    </>
-                  ) : (
-                    <div className="repo-empty-small">
-                      Candidate patches will appear after the failure is
-                      reproduced.
-                    </div>
-                  ))}
-                {tab === "tests" && (
-                  <>
-                    <Log execution={run?.baseline} title="Original code" />
-                    {run?.reproduction && (
-                      <Log
-                        execution={run.reproduction}
-                        title="Original code + new regression test"
-                      />
-                    )}
-                    {run?.candidates.map((c) => (
-                      <div key={c.id}>
-                        <Log
-                          execution={c.trial}
-                          title={`Candidate ${c.id} · ${c.title}`}
-                        />
-                        {c.verification && (
-                          <Log
-                            execution={c.verification}
-                            title={`Candidate ${c.id} · independent repeat`}
-                          />
-                        )}
-                      </div>
-                    ))}
-                  </>
-                )}
-                {tab === "activity" && (
-                  <div className="repo-timeline">
-                    {run?.events.length ? (
-                      run.events.map((event, i) => (
-                        <div key={i}>
-                          <span
-                            className={
-                              i === run.events.length - 1 && running
-                                ? "current"
-                                : ""
-                            }
-                          >
-                            {i === run.events.length - 1 && running ? (
-                              <Loader2 className="spin" size={13} />
-                            ) : (
-                              <Check size={12} />
-                            )}
-                          </span>
-                          <div>
-                            <strong>
-                              {event.stage[0].toUpperCase() +
-                                event.stage.slice(1)}
-                            </strong>
-                            <p>{event.message}</p>
-                            <time>
-                              {new Date(event.at * 1000).toLocaleTimeString(
-                                [],
-                                {
-                                  hour: "2-digit",
-                                  minute: "2-digit",
-                                  second: "2-digit",
-                                },
-                              )}
-                            </time>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="repo-empty-small">
-                        A chronological record of the investigation will appear
-                        here.
-                      </p>
-                    )}
-                  </div>
-                )}
-                {tab === "graph" && (
-                  <>
-                    <div className="repo-graph-intro">
-                      <div>
-                        <h2>
-                          {run?.context
-                            ? "The evidence behind the repair"
-                            : "Explore the code before it runs"}
-                        </h2>
-                        <p>
-                          {run?.context
-                            ? `${run.context.seeds.length} starting files → ${run.context.files.length} files in context → ${run.context.editable.length} eligible for edits. ${run.context.affected_tests.length} connected test files.`
-                            : "Select a file to see its imports, dependents, owners, and source. Run a rehearsal to follow the investigation."}
-                        </p>
-                      </div>
-                      <span>
-                        <GitBranch size={13} /> FalkorDB
-                      </span>
-                    </div>
-                    <RepositoryGraph
-                      key={project.id}
-                      graph={project.graph}
-                      context={run?.context}
-                      changed={Object.keys(candidate?.changes || {})}
-                      onFile={(path) => void openFile(path)}
-                    />
-                    <details className="repo-graph-method">
-                      <summary>
-                        How this graph guides the repair{" "}
-                        {run?.context && (
-                          <span>
-                            {run.context.queries.length} executed queries
-                          </span>
-                        )}
-                      </summary>
-                      <p>
-                        FalkorDB follows imports from failure-related files,
-                        finds dependent tests, and resolves owners. Its results
-                        define the source the model can inspect and edit. Arrows
-                        represent static imports; they do not assert runtime
-                        coverage. The full configured test suite still runs.
-                      </p>
-                      {run?.context ? (
-                        <div className="repo-queries">
-                          {run.context.queries.map((q, i) => (
-                            <section key={i}>
-                              <div>
-                                <strong>Query {i + 1}</strong>
-                                <span>
-                                  {q.rows} rows · {q.duration_ms} ms
-                                </span>
-                              </div>
-                              <pre>{q.query}</pre>
-                            </section>
-                          ))}
-                        </div>
-                      ) : (
-                        <p>
-                          Executed queries will appear here when the
-                          investigation starts.
-                        </p>
-                      )}
-                    </details>
-                  </>
-                )}
-              </section>
-            </div>
-            <aside
-              className="repo-incident-form"
-              id="repo-incident-panel"
-              hidden={!incidentOpen}
-            >
-              <div className="repo-section-kicker">Incident brief</div>
-              <h2>
-                {project.source === "example"
-                  ? "Ready to rehearse"
-                  : "What’s going wrong?"}
-              </h2>
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void start();
-                }}
-              >
-                <label htmlFor="incident-description">
-                  Incident or failing behavior
-                </label>
-                <textarea
-                  id="incident-description"
-                  value={incident}
-                  onChange={(e) => setIncident(e.target.value)}
-                  placeholder="What did you expect? What happened instead? Include a stack trace, filename, or failing example."
-                  minLength={15}
-                  maxLength={12000}
-                  required
-                  rows={9}
-                />
-                <details className="repo-run-options">
-                  <summary>
-                    Test commands & options <ChevronDown size={13} />
-                  </summary>
-                  <label htmlFor="setup-command">
-                    Setup command <span>Optional</span>
-                  </label>
-                  <textarea
-                    id="setup-command"
-                    rows={2}
-                    value={setup}
-                    onChange={(e) => setSetup(e.target.value)}
-                    maxLength={1500}
-                    placeholder="No dependencies to install"
-                    className="repo-command-input"
-                  />
-                  <label htmlFor="test-command">Test command</label>
-                  <textarea
-                    id="test-command"
-                    rows={2}
-                    value={test}
-                    onChange={(e) => setTest(e.target.value)}
-                    maxLength={1500}
-                    required
-                    className="repo-command-input"
-                  />
-                  <p className="repo-command-help">
-                    Runs in <code>{project.directory || "/"}</code>. Review
-                    commands before starting.
-                  </p>
-                  <label className="repo-checkbox">
-                    <input
-                      type="checkbox"
-                      checked={regression}
-                      onChange={(e) => setRegression(e.target.checked)}
-                    />
-                    <span>
-                      If existing tests pass, add a regression test to reproduce
-                      this bug.
-                    </span>
-                  </label>
-                </details>
+                    <PanelLeftOpen size={15} />
+                  )}
+                  Incident
+                </button>
                 <button
                   className="repo-button primary"
                   type="submit"
+                  form="repo-rehearsal-form"
                   disabled={
                     !!busy ||
                     running ||
@@ -1314,48 +906,463 @@ export default function Repositories() {
                     <Square size={11} /> Stop rehearsal
                   </button>
                 )}
-              </form>
-              <div className="repo-execution-note">
-                <div>
-                  <span
-                    className={
-                      session.sandbox.available
-                        ? "repo-connected"
-                        : "repo-disconnected"
-                    }
-                  />
-                  {session.sandbox.description}
-                </div>
-                {session.allowance && (
-                  <p>
-                    {session.allowance.remaining > 0
-                      ? `${session.allowance.remaining} rehearsal${session.allowance.remaining === 1 ? "" : "s"} available under the current allowance.`
-                      : `The current allowance is used. ${session.allowance.available_after ? "Available again " + new Date(session.allowance.available_after * 1000).toLocaleString() + "." : "Refresh later to check availability."}`}
-                  </p>
-                )}
-                <p>
-                  Each candidate starts from the same snapshot. Existing tests
-                  stay intact. Passing repairs are repeated in a fresh sandbox.
-                </p>
-                <p>
-                  Source context is sent to the repair model. Review the diff
-                  and test evidence before applying a patch.
-                </p>
-                {!session.sandbox.available && (
-                  <p className="repo-bad">
-                    The server’s sandbox runner needs configuration before tests
-                    can run.
-                  </p>
-                )}
-                {!session.provider_available && (
-                  <p className="repo-bad">
-                    The server’s Backboard connection needs configuration before
-                    repairs can be generated.
-                  </p>
-                )}
               </div>
-            </aside>
-          </div>
+            </div>
+            <div
+              className={`repo-workspace-grid ${incidentOpen ? "" : "incident-collapsed"}`}
+            >
+              <aside
+                className="repo-incident-form"
+                id="repo-incident-panel"
+                hidden={!incidentOpen}
+              >
+                <div className="repo-section-kicker">Incident brief</div>
+                <h2>
+                  {project.source === "example"
+                    ? "Ready to rehearse"
+                    : "What’s going wrong?"}
+                </h2>
+                <form
+                  id="repo-rehearsal-form"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    void start();
+                  }}
+                >
+                  <label htmlFor="incident-description">
+                    Incident or failing behavior
+                  </label>
+                  <textarea
+                    id="incident-description"
+                    value={incident}
+                    onChange={(e) => setIncident(e.target.value)}
+                    placeholder="What did you expect? What happened instead? Include a stack trace, filename, or failing example."
+                    minLength={15}
+                    maxLength={12000}
+                    required
+                    rows={5}
+                  />
+                  <details className="repo-run-options">
+                    <summary>
+                      Test commands & options <ChevronDown size={13} />
+                    </summary>
+                    <label htmlFor="setup-command">
+                      Setup command <span>Optional</span>
+                    </label>
+                    <textarea
+                      id="setup-command"
+                      rows={2}
+                      value={setup}
+                      onChange={(e) => setSetup(e.target.value)}
+                      maxLength={1500}
+                      placeholder="No dependencies to install"
+                      className="repo-command-input"
+                    />
+                    <label htmlFor="test-command">Test command</label>
+                    <textarea
+                      id="test-command"
+                      rows={2}
+                      value={test}
+                      onChange={(e) => setTest(e.target.value)}
+                      maxLength={1500}
+                      required
+                      className="repo-command-input"
+                    />
+                    <p className="repo-command-help">
+                      Runs in <code>{project.directory || "/"}</code>. Review
+                      commands before starting.
+                    </p>
+                    <label className="repo-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={regression}
+                        onChange={(e) => setRegression(e.target.checked)}
+                      />
+                      <span>
+                        If existing tests pass, add a regression test to
+                        reproduce this bug.
+                      </span>
+                    </label>
+                  </details>
+                </form>
+                <div className="repo-execution-note">
+                  <div>
+                    <span
+                      className={
+                        session.sandbox.available
+                          ? "repo-connected"
+                          : "repo-disconnected"
+                      }
+                    />
+                    {session.sandbox.description}
+                  </div>
+                  {session.allowance && (
+                    <p>
+                      {session.allowance.remaining > 0
+                        ? `${session.allowance.remaining} rehearsal${session.allowance.remaining === 1 ? "" : "s"} available under the current allowance.`
+                        : `The current allowance is used. ${session.allowance.available_after ? "Available again " + new Date(session.allowance.available_after * 1000).toLocaleString() + "." : "Refresh later to check availability."}`}
+                    </p>
+                  )}
+                  <p>
+                    Each candidate starts from the same snapshot. Existing tests
+                    stay intact. Passing repairs are repeated in a fresh
+                    sandbox.
+                  </p>
+                  <p>
+                    Source context is sent to the repair model. Review the diff
+                    and test evidence before applying a patch.
+                  </p>
+                  {!session.sandbox.available && (
+                    <p className="repo-bad">
+                      The server’s sandbox runner needs configuration before
+                      tests can run.
+                    </p>
+                  )}
+                  {!session.provider_available && (
+                    <p className="repo-bad">
+                      The server’s Backboard connection needs configuration
+                      before repairs can be generated.
+                    </p>
+                  )}
+                </div>
+              </aside>
+              <div className="repo-investigation">
+                <section className="repo-evidence">
+                  {tab !== "graph" && run?.baseline && (
+                    <div
+                      className="repo-test-progress"
+                      aria-label="Test results"
+                    >
+                      {[
+                        {
+                          title: "Original",
+                          result: run.reproduction || run.baseline,
+                        },
+                        { title: "With patch", result: candidate?.trial },
+                        {
+                          title: "Fresh repeat",
+                          result: candidate?.verification,
+                        },
+                      ].map((step) => (
+                        <div key={step.title}>
+                          <span>{step.title}</span>
+                          <strong
+                            className={
+                              step.result
+                                ? step.result.exit_code === 0
+                                  ? "repo-good"
+                                  : "repo-bad"
+                                : ""
+                            }
+                          >
+                            {step.result
+                              ? `${step.result.exit_code === 0 ? "Passed" : "Failed"} · ${step.result.test_count ?? "—"} tests`
+                              : "Pending"}
+                          </strong>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {tab === "overview" &&
+                    (!run ? (
+                      <div className="repo-before-run">
+                        <div className="repo-outline-icon">
+                          <Code2 size={25} />
+                        </div>
+                        <h2>
+                          The source is indexed.
+                          <br />
+                          Now, tell us what’s broken.
+                        </h2>
+                        <p>
+                          Describe the failure in the incident brief and check
+                          the test commands. Rehearsal will reproduce it and
+                          test proposed repairs in separate sandboxes.
+                        </p>
+                        <div>
+                          <span>
+                            <Check size={13} /> Exact snapshot saved
+                          </span>
+                          <span>
+                            <Check size={13} /> Dependency graph built
+                          </span>
+                          <span>
+                            <Check size={13} /> {project.test_count} test files
+                            found
+                          </span>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="repo-evidence-intro">
+                          <div className="repo-section-kicker">
+                            {label(run.status)}
+                          </div>
+                          <h2>
+                            {run.status === "review"
+                              ? "A tested patch is ready for your review."
+                              : running
+                                ? "Following the failure through your code."
+                                : run.message || "Review the investigation."}
+                          </h2>
+                          <p>
+                            {run.diagnosis ||
+                              run.message ||
+                              "Commands, graph queries, and generated changes will appear as each step completes."}
+                          </p>
+                        </div>
+                        {run.candidates.map((c) => (
+                          <button
+                            key={c.id}
+                            className={`repo-candidate ${c.id === run.recommended ? "recommended" : ""}`}
+                            onClick={() => {
+                              setCandidateId(c.id);
+                              setTab("patch");
+                            }}
+                          >
+                            <span className="repo-candidate-number">
+                              0{c.id}
+                            </span>
+                            <span>
+                              <strong>{c.title}</strong>
+                              <small>
+                                {label(c.status)}
+                                {c.changes
+                                  ? ` · ${Object.keys(c.changes).length} files`
+                                  : ""}
+                              </small>
+                            </span>
+                            <ArrowRight size={15} />
+                          </button>
+                        ))}
+                        {run.context && (
+                          <div className="repo-impact-summary">
+                            <h3>What the graph connected</h3>
+                            <p>
+                              {run.context.files.length} files informed the
+                              investigation. {run.context.affected_tests.length}{" "}
+                              test files depend on the selected modules.
+                            </p>
+                            {run.context.owners.length > 0 && (
+                              <p>
+                                Owners:{" "}
+                                {[
+                                  ...new Set(
+                                    run.context.owners.map((o) => o.name),
+                                  ),
+                                ].join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                        <p className="repo-evidence-limit">
+                          A passing run verifies the configured tests. Review
+                          behavior, security, and production requirements before
+                          merging.
+                        </p>
+                      </>
+                    ))}
+                  {tab === "patch" &&
+                    (candidate ? (
+                      <>
+                        {run.candidates.length > 1 && (
+                          <div className="repo-candidate-tabs">
+                            {run.candidates.map((c) => (
+                              <button
+                                key={c.id}
+                                className={
+                                  candidate.id === c.id ? "selected" : ""
+                                }
+                                onClick={() => setCandidateId(c.id)}
+                              >
+                                0{c.id} {c.title}
+                                <span>{label(c.status)}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        <div className="repo-patch-intro">
+                          <div className="repo-patch-heading">
+                            <span className="repo-section-kicker">
+                              Proposed fix ·{" "}
+                              {Object.keys(candidate.changes || {}).length}{" "}
+                              changed files · not applied
+                            </span>
+                            {candidate.status === "verified" && (
+                              <a
+                                className="repo-button primary"
+                                href={`/api/code/runs/${run.id}/patch/${candidate.id}`}
+                                download
+                              >
+                                <ArrowDownToLine size={14} /> Download patch
+                              </a>
+                            )}
+                          </div>
+                          <h2>{candidate.title}</h2>
+                          <p>{candidate.reason || candidate.message}</p>
+                          {candidate.message && candidate.reason && (
+                            <p className="repo-bad">{candidate.message}</p>
+                          )}
+                        </div>
+                        {candidate.patch && <Diff patch={candidate.patch} />}
+                        <Review
+                          candidate={candidate}
+                          run={run}
+                          project={project}
+                          session={session}
+                          reviewed={reviewed}
+                          setReviewed={setReviewed}
+                          busy={busy}
+                          publish={() =>
+                            void act("publish", async () => {
+                              await api(`/runs/${run.id}/publish`, {
+                                candidate_id: candidate.id,
+                                digest: candidate.review_digest,
+                              });
+                              await refresh();
+                            })
+                          }
+                        />
+                      </>
+                    ) : (
+                      <div className="repo-empty-small">
+                        Candidate patches will appear after the failure is
+                        reproduced.
+                      </div>
+                    ))}
+                  {tab === "tests" && (
+                    <>
+                      <Log execution={run?.baseline} title="Original code" />
+                      {run?.reproduction && (
+                        <Log
+                          execution={run.reproduction}
+                          title="Original code + new regression test"
+                        />
+                      )}
+                      {run?.candidates.map((c) => (
+                        <div key={c.id}>
+                          <Log
+                            execution={c.trial}
+                            title={`Candidate ${c.id} · ${c.title}`}
+                          />
+                          {c.verification && (
+                            <Log
+                              execution={c.verification}
+                              title={`Candidate ${c.id} · independent repeat`}
+                            />
+                          )}
+                        </div>
+                      ))}
+                    </>
+                  )}
+                  {tab === "activity" && (
+                    <div className="repo-timeline">
+                      {run?.events.length ? (
+                        run.events.map((event, i) => (
+                          <div key={i}>
+                            <span
+                              className={
+                                i === run.events.length - 1 && running
+                                  ? "current"
+                                  : ""
+                              }
+                            >
+                              {i === run.events.length - 1 && running ? (
+                                <Loader2 className="spin" size={13} />
+                              ) : (
+                                <Check size={12} />
+                              )}
+                            </span>
+                            <div>
+                              <strong>
+                                {event.stage[0].toUpperCase() +
+                                  event.stage.slice(1)}
+                              </strong>
+                              <p>{event.message}</p>
+                              <time>
+                                {new Date(event.at * 1000).toLocaleTimeString(
+                                  [],
+                                  {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                  },
+                                )}
+                              </time>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="repo-empty-small">
+                          A chronological record of the investigation will
+                          appear here.
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  {tab === "graph" && (
+                    <>
+                      <div className="repo-graph-intro">
+                        <div>
+                          <h2>
+                            {run?.context
+                              ? "The evidence behind the repair"
+                              : "Explore the code before it runs"}
+                          </h2>
+                          <p>
+                            {run?.context
+                              ? `${run.context.seeds.length} starting files → ${run.context.files.length} files in context → ${run.context.editable.length} eligible for edits. ${run.context.affected_tests.length} connected test files.`
+                              : "Select a file to see its imports, dependents, owners, and source. Run a rehearsal to follow the investigation."}
+                          </p>
+                        </div>
+                        <span>
+                          <GitBranch size={13} /> FalkorDB
+                        </span>
+                      </div>
+                      <details className="repo-graph-method" open>
+                        <summary>
+                          How this graph guides the repair{" "}
+                          {run?.context && (
+                            <span>
+                              {run.context.queries.length} executed queries
+                            </span>
+                          )}
+                        </summary>
+                        <p>
+                          FalkorDB follows imports from failure-related files,
+                          finds dependent tests, and resolves owners. Its
+                          results define the source the model can inspect and
+                          edit. Arrows represent static imports; they do not
+                          assert runtime coverage. The full configured test
+                          suite still runs.
+                        </p>
+                        {run?.context ? (
+                          <div className="repo-queries">
+                            {run.context.queries.map((q, i) => (
+                              <section key={i}>
+                                <div>
+                                  <strong>Query {i + 1}</strong>
+                                  <span>
+                                    {q.rows} rows · {q.duration_ms} ms
+                                  </span>
+                                </div>
+                                <pre>{q.query}</pre>
+                              </section>
+                            ))}
+                          </div>
+                        ) : (
+                          <p>
+                            Executed queries will appear here when the
+                            investigation starts.
+                          </p>
+                        )}
+                      </details>
+                    </>
+                  )}
+                </section>
+              </div>
+            </div>
+          </section>
         </main>
       )}
       <dialog

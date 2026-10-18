@@ -1,4 +1,4 @@
-/* Repository workbench: give the evidence the available viewport. */
+/* The graph stays above an independently scrolling workbench. */
 .repo-header {
   height: 56px;
   padding: 0 26px;
@@ -7,87 +7,183 @@
 .repo-header .brand {
   font-size: 22px;
 }
+.repo-app:has(.repo-workspace) {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
 .repo-workspace {
   max-width: 1920px;
-  padding: 18px 24px 20px;
+  height: 100dvh;
+  padding: 0 24px 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 .repo-workspace-heading {
-  margin-bottom: 14px;
-  gap: 20px;
-}
-.repo-workspace-heading h1 {
-  font-size: 23px;
+  min-height: 54px;
+  margin: 0;
+  gap: 16px;
+  flex: 0 0 auto;
+  justify-content: flex-start;
+  align-items: center;
+  border-bottom: 1px solid #e5e9df;
 }
 .repo-back {
-  margin-bottom: 7px;
+  margin: 0;
+  width: 28px;
+  height: 32px;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 4px;
+}
+.repo-back:hover {
+  background: #edf2e8;
+}
+.repo-workspace-heading h1 {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.35px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  min-width: 0;
 }
 .repo-project-meta {
-  margin-top: 6px;
-}
-.repo-workspace-toolbar,
-.repo-workspace-tools,
-.repo-snapshot-stats {
-  display: flex;
-  align-items: center;
-}
-.repo-workspace-toolbar {
-  justify-content: space-between;
-  gap: 15px;
-  margin-bottom: 12px;
-}
-.repo-snapshot-stats {
-  gap: 18px;
+  margin: 0;
+  gap: 9px;
+  flex-wrap: nowrap;
   font-size: 11px;
-  color: #63705f;
+  flex-shrink: 0;
+}
+.repo-project-meta code {
+  font-size: 10px;
+}
+.repo-project-meta span {
+  max-width: 180px;
+  overflow: hidden;
   white-space: nowrap;
 }
-.repo-snapshot-stats b {
-  font-family: var(--mono);
-  font-weight: 500;
-  color: #334a38;
-  margin-right: 3px;
-}
 .repo-workspace-tools {
-  gap: 12px;
-  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 .repo-workspace-tools select {
   font: inherit;
   font-size: 11px;
   color: #52624e;
-  padding: 8px;
-  border: 1px solid #d9e1d5;
+  padding: 6px 8px;
+  border: 0;
   border-radius: 4px;
-  background: #fff;
-  max-width: 210px;
-}
-.repo-workspace-tools .repo-button {
-  min-height: 32px;
-  padding: 7px 10px;
+  background: transparent;
+  max-width: 100px;
 }
 .repo-workspace-tools .repo-settings {
+  position: relative;
   margin: 0;
   font-size: 11px;
 }
-.repo-settings[open] {
+.repo-settings > summary {
+  list-style: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+}
+.repo-settings > summary::-webkit-details-marker {
+  display: none;
+}
+.repo-settings > summary:hover {
+  background: #edf2e8;
+}
+.repo-settings-menu {
   position: absolute;
-  z-index: 5;
-  right: 126px;
-  top: 0;
-  width: 240px;
+  z-index: 15;
+  right: 0;
+  top: 36px;
+  width: 250px;
   background: #fff;
-  padding: 12px 16px;
+  padding: 12px 18px;
   border: 1px solid #d6e0d2;
   border-radius: 5px;
   box-shadow: 0 8px 24px #283d2912;
 }
-.repo-settings[open] summary {
-  margin-bottom: 16px;
+.repo-icon-button {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  color: #53694a;
+}
+.repo-icon-button:hover {
+  background: #edf3e8;
+}
+.repo-workbench {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border: 1px solid #dce3d5;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+.repo-workbench-toolbar {
+  display: flex;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: 20px;
+  border-bottom: 1px solid #dce3d5;
+  flex: 0 0 auto;
+  padding-right: 12px;
+}
+.repo-tabs {
+  flex: 0 1 auto;
+  min-width: 0;
+  border: 0;
+  gap: 24px;
+  padding: 0 20px;
+  background: transparent;
+}
+.repo-tabs button {
+  padding: 16px 0 14px;
+  font-size: 12px;
+}
+.repo-tabs button > span {
+  font-size: 10px;
+}
+.repo-workbench-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.repo-workbench-actions .repo-button {
+  padding: 7px 11px;
+  min-height: 32px;
+  font-size: 11px;
+}
+.repo-workbench-actions .repo-incident-toggle {
+  border-color: transparent;
+  background: transparent;
+}
+.repo-workbench-actions .repo-incident-toggle[aria-expanded="true"] {
+  background: #f0f4ea;
 }
 .repo-workspace-grid {
-  grid-template-columns: minmax(0, 1fr) 326px;
+  flex: 1;
+  display: grid;
+  grid-template-columns: 306px minmax(0, 1fr);
   min-height: 0;
-  align-items: stretch;
+  border: 0;
+  border-radius: 0;
+  position: relative;
 }
 .repo-workspace-grid.incident-collapsed {
   grid-template-columns: minmax(0, 1fr);
@@ -98,20 +194,6 @@
   display: flex;
   flex-direction: column;
 }
-.repo-tabs {
-  flex: 0 0 auto;
-  border-top: 0;
-  gap: 27px;
-  padding: 0 24px;
-  background: #fff;
-}
-.repo-tabs button {
-  padding: 15px 0 13px;
-  font-size: 12px;
-}
-.repo-tabs button > span {
-  font-size: 10px;
-}
 .repo-evidence {
   min-height: 0;
   overflow: auto;
@@ -119,32 +201,35 @@
   flex: 1;
 }
 .repo-incident-form {
-  padding: 23px 22px;
+  padding: 20px;
   min-height: 0;
   overflow: auto;
   background: #fbfcf9;
+  border: 0;
+  border-right: 1px solid #e1e7da;
+  order: 0;
 }
 .repo-incident-form[hidden] {
   display: none;
 }
 .repo-incident-form h2 {
-  font-size: 20px;
-  margin-bottom: 22px;
+  font-size: 18px;
+  margin-bottom: 18px;
 }
 .repo-app .repo-incident-form label {
   font-size: 11px;
 }
 .repo-app .repo-incident-form textarea {
   font-size: 12px;
-  line-height: 1.75;
+  line-height: 1.7;
 }
 .repo-app .repo-incident-form textarea#incident-description {
-  min-height: 220px;
+  min-height: 160px;
 }
 .repo-run-options {
   border-block: 1px solid #e5eadd;
-  margin: 18px 0 14px;
-  padding: 13px 0;
+  margin: 16px 0 12px;
+  padding: 12px 0;
 }
 .repo-run-options summary {
   font-size: 11px;
@@ -158,16 +243,31 @@
 .repo-run-options[open] summary {
   margin-bottom: 16px;
 }
-.repo-incident-form .repo-button {
-  min-height: 40px;
-  font-size: 12px;
-}
 .repo-execution-note {
-  margin-top: 21px;
-  padding-top: 16px;
+  margin-top: 16px;
+  padding-top: 0;
+  border-top: 0;
 }
 .repo-execution-note p {
   line-height: 1.7;
+}
+.repo-before-run {
+  padding: 28px;
+}
+.repo-before-run h2 {
+  font-size: 21px;
+}
+.repo-before-run p {
+  max-width: 470px;
+}
+.repo-app:has(.repo-workspace) > .repo-error {
+  position: fixed;
+  top: 58px;
+  left: 24px;
+  right: 24px;
+  z-index: 30;
+  margin: 0 auto;
+  box-shadow: 0 5px 18px #522b1820;
 }
 .repo-test-progress {
   display: grid;
@@ -176,7 +276,7 @@
   background: #fafcf7;
 }
 .repo-test-progress > div {
-  padding: 14px 24px;
+  padding: 10px 24px;
   display: grid;
   gap: 5px;
 }
@@ -267,67 +367,50 @@
   color: #546a4a;
   white-space: nowrap;
 }
+
+/* No enclosing panel: the file map belongs to the workspace background. */
 .repo-graph-explorer {
-  background: #f8faf6;
-  border-top: 1px solid #e3e9de;
-}
-.repo-graph-explorer.expanded {
-  position: fixed;
-  z-index: 20;
-  inset: 20px;
-  border: 1px solid #bccfb5;
-  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 0 100vmax #20321d70;
-  overflow: auto;
-}
-.repo-graph-explorer.expanded .repo-graph-canvas {
-  flex: 1;
-  min-height: 220px;
+  flex: 0 0 auto;
+  min-height: 0;
+  padding: 8px 0 12px;
 }
 .repo-graph-toolbar {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 8px 18px;
-  border-bottom: 1px solid #e4ebdd;
-  background: #fff;
+  gap: 16px;
+  min-height: 34px;
   flex-shrink: 0;
 }
-.repo-graph-scope {
+.repo-graph-mode {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 2px;
 }
-.repo-graph-scope button {
+.repo-graph-mode button {
   padding: 6px 9px;
   font-size: 11px;
-  border: 1px solid transparent;
   border-radius: 4px;
   white-space: nowrap;
+  color: #60705a;
 }
-.repo-graph-scope button[aria-pressed="true"] {
-  background: #edf3e8;
-  border-color: #dbe4d3;
-  color: #385431;
+.repo-graph-mode button[aria-pressed="true"] {
+  background: #eaf0e4;
+  color: #345131;
 }
-.repo-graph-scope button:disabled {
-  color: #697464;
-  opacity: 0.6;
-}
-.repo-graph-scope button span {
-  font: 10px var(--mono);
-  margin-left: 6px;
+.repo-graph-instruction {
+  font-size: 11px;
+  color: #6c7765;
 }
 .repo-graph-search {
   margin-left: auto;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   color: #68785d;
   position: relative;
-  width: 180px;
+  width: 160px;
 }
 .repo-app .repo-graph-search input {
   border: 0;
@@ -340,10 +423,10 @@
   position: absolute;
   top: 32px;
   right: 0;
-  z-index: 3;
+  z-index: 5;
   min-width: 270px;
   max-width: 80vw;
-  max-height: 320px;
+  max-height: 280px;
   overflow: auto;
   background: #fff;
   padding: 6px;
@@ -357,7 +440,7 @@
   text-align: left;
   width: 100%;
   overflow-wrap: anywhere;
-  font: 10px var(--mono);
+  font: 11px var(--mono);
 }
 .repo-graph-matches button:hover {
   background: #f0f5e9;
@@ -366,20 +449,24 @@
   padding: 12px;
   font-size: 11px;
 }
-.repo-icon-button {
-  display: inline-grid;
+.repo-graph-navigation {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+.repo-graph-navigation button {
+  display: grid;
   place-items: center;
   width: 28px;
   height: 28px;
-  flex-shrink: 0;
   border-radius: 4px;
-  color: #53694a;
+  color: #526a46;
 }
-.repo-icon-button:hover {
-  background: #edf3e8;
+.repo-graph-navigation button:hover {
+  background: #eaf0e4;
 }
 .repo-graph-canvas {
-  height: clamp(260px, calc(100dvh - 515px), 780px);
+  height: clamp(280px, 32dvh, 340px);
   position: relative;
   overflow: hidden;
 }
@@ -393,46 +480,49 @@
 .repo-graph-canvas > svg:active {
   cursor: grabbing;
 }
+.repo-graph-group-label {
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 500;
+  fill: #66745c;
+}
 .repo-graph-edge {
   fill: none;
-  stroke: #a5b49e;
-  stroke-width: 1.2;
-  opacity: 0.8;
-}
-.repo-graph-edge.selected {
-  stroke: #426c38;
-  stroke-width: 2;
-  opacity: 1;
-}
-.repo-graph-edge.dimmed {
-  opacity: 0.14;
+  stroke: #77917a;
+  stroke-width: 1.3;
+  opacity: 0.85;
 }
 .repo-graph-file {
   cursor: pointer;
   outline: none;
 }
 .repo-graph-file rect {
-  fill: #fff;
-  stroke: #cad7c2;
+  fill: #fefefc;
+  stroke: #d5ddcd;
   stroke-width: 1;
 }
 .repo-graph-file circle {
-  fill: #668854;
+  fill: #7d926c;
 }
 .repo-graph-file.test circle {
-  fill: #a17b3a;
+  fill: #aa8951;
 }
 .repo-graph-file.test rect {
-  fill: #fffcf5;
-  stroke: #dcd2b9;
+  fill: #fcfaf3;
+  stroke: #dfdac8;
 }
-.repo-graph-file.included rect {
-  fill: #eff5e9;
-  stroke: #a4bd93;
+.repo-graph-file.connected rect {
+  stroke: #90a685;
 }
-.repo-graph-file.seed rect {
-  fill: #f9f1df;
-  stroke: #b69b60;
+.repo-graph-file.selected rect {
+  fill: #eaf2e5;
+  stroke: #446d3a;
+  stroke-width: 1.7;
+}
+.repo-graph-file:focus-visible rect,
+.repo-graph-file:hover rect {
+  stroke: #4a6d3f;
+  stroke-width: 2;
 }
 .repo-graph-file.changed rect {
   fill: #2e593d;
@@ -447,17 +537,9 @@
 .repo-graph-file.changed .repo-graph-directory {
   fill: #dae8d2;
 }
-.repo-graph-file.selected rect,
-.repo-graph-file:focus-visible rect,
-.repo-graph-file:hover rect {
-  stroke: #4a6d3f;
-  stroke-width: 2.5;
-}
 .repo-graph-file.changed.selected rect {
   stroke: #aecb96;
-}
-.repo-graph-file.dimmed {
-  opacity: 0.24;
+  stroke-width: 2;
 }
 .repo-graph-filename {
   font: 12px var(--mono);
@@ -465,155 +547,96 @@
 }
 .repo-graph-directory {
   font: 10px var(--mono);
-  fill: #5a684f;
+  fill: #617055;
 }
-.repo-graph-navigation {
-  position: absolute;
-  bottom: 15px;
-  right: 17px;
-  display: flex;
-  align-items: center;
-  padding: 3px;
-  background: #fff;
-  border: 1px solid #d2ddca;
-  border-radius: 5px;
-  box-shadow: 0 2px 6px #283d2910;
-}
-.repo-graph-navigation button {
-  display: grid;
-  place-items: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 3px;
-  color: #526a46;
-}
-.repo-graph-navigation button:hover {
-  background: #eef4e8;
-}
-.repo-graph-navigation span {
-  font: 10px var(--mono);
-  width: 42px;
-  text-align: center;
-  color: #69735f;
-}
-.repo-graph-navigation button:last-child {
-  border-left: 1px solid #e3e9df;
-  border-radius: 0;
-  margin-left: 3px;
-  width: 34px;
-}
-.repo-graph-hint {
-  position: absolute;
-  bottom: 25px;
-  left: 20px;
-  color: #5e7153;
-  font-size: 10px;
-  background: #f8faf6e8;
-  padding: 3px 6px;
-}
-.repo-graph-legend {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 13px;
-  padding: 12px 20px;
-  border-top: 1px solid #e1e8da;
-  background: #fff;
-  flex-shrink: 0;
-}
-.repo-graph-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  color: #59674f;
-}
-.repo-graph-legend i {
-  width: 8px;
-  height: 8px;
-  border-radius: 2px;
-  border: 1px solid #aab89f;
-  background: #fff;
-}
-.repo-graph-legend i.test {
-  background: #fcf2da;
-  border-color: #b69b60;
-}
-.repo-graph-legend i.seed {
-  background: #f3e4c2;
-  border-color: #a88c50;
-}
-.repo-graph-legend i.included {
-  background: #d9e8cb;
-  border-color: #7c9a67;
-}
-.repo-graph-legend i.changed {
-  background: #2e593d;
-  border-color: #2e593d;
-}
-.repo-graph-edge-count {
-  margin-left: auto;
+.repo-graph-patch-mark {
+  fill: none;
+  stroke: #dcecd4;
+  stroke-width: 1.5;
 }
 .repo-graph-selection {
-  padding: 16px 22px;
-  border-top: 1px solid #dae4d2;
-  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+  flex-shrink: 0;
+  padding: 0 12px;
+  color: #53674a;
+  font-size: 11px;
+}
+.repo-graph-selection > svg {
   flex-shrink: 0;
 }
-.repo-graph-selection > div:first-child {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  color: #38502e;
-}
 .repo-graph-selection strong {
-  font: 12px var(--mono);
-  overflow-wrap: anywhere;
+  font: 11px var(--mono);
+  color: #354f2e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 36%;
 }
-.repo-graph-selection > div:first-child button {
-  margin-left: auto;
-}
-.repo-graph-selection p {
-  color: #66725b;
-  font-size: 11px;
-  margin: 6px 0 12px;
-}
-.repo-graph-file-detail {
+.repo-graph-relationship {
   display: flex;
   align-items: center;
-  gap: 20px;
-  font-size: 11px;
-  color: #536a46;
-  flex-wrap: wrap;
+  gap: 5px;
+  white-space: nowrap;
 }
-.repo-graph-file-detail b {
-  font-family: var(--mono);
+.repo-graph-relationship b {
   font-weight: 500;
+  color: #344e2f;
 }
-.repo-graph-file-detail > button {
-  margin-left: auto;
-}
-.repo-graph-neighbors {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-top: 8px;
-}
-.repo-graph-neighbors button {
-  padding: 4px 7px;
-  background: #f1f5ec;
-  color: #566a4a;
+.repo-graph-patched {
+  color: #385b36;
+  background: #e4eddd;
   border-radius: 3px;
-  font: 9px var(--mono);
-  overflow-wrap: anywhere;
+  padding: 3px 6px;
+  font-size: 10px;
+}
+.repo-graph-owner {
+  color: #66755d;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.repo-graph-open {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11px;
+  padding: 6px 0;
+  white-space: nowrap;
+  color: #375f3b;
+}
+.repo-graph-open:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.repo-graph-cap {
+  font-size: 10px;
+}
+.repo-graph-explorer.expanded {
+  position: fixed;
+  z-index: 20;
+  inset: 16px;
+  padding: 12px 16px;
+  border: 1px solid #bccfb5;
+  border-radius: 8px;
+  background: #fafbf8;
+  box-shadow: 0 0 0 100vmax #20321d70;
+}
+.repo-graph-explorer.expanded .repo-graph-canvas {
+  flex: 1;
+  height: auto;
+  min-height: 0;
 }
 .repo-graph-method {
   padding: 15px 23px;
   border-top: 1px solid #e3e9dd;
-  background: #fff;
 }
 .repo-graph-method > summary {
-  font-size: 11px;
+  font-size: 12px;
   color: #53644a;
   cursor: pointer;
 }
@@ -700,161 +723,145 @@
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
 }
 
-@media (min-width: 901px) {
-  .repo-app:has(.repo-workspace) {
-    height: 100dvh;
-    overflow: hidden;
-  }
+@media (max-width: 1100px) {
   .repo-workspace {
-    height: calc(100dvh - 56px);
-    display: flex;
-    flex-direction: column;
+    padding-inline: 16px;
   }
   .repo-workspace-grid {
-    flex: 1;
-  }
-  .repo-workspace-heading,
-  .repo-workspace-toolbar {
-    flex: 0 0 auto;
-  }
-  .repo-app:has(.repo-workspace) > .repo-error {
-    position: fixed;
-    top: 60px;
-    left: 24px;
-    right: 24px;
-    z-index: 30;
-    margin: 0 auto;
-    box-shadow: 0 5px 18px #522b1820;
-  }
-}
-@media (max-width: 1150px) {
-  .repo-workspace-grid {
-    grid-template-columns: minmax(0, 1fr) 292px;
-  }
-  .repo-incident-form {
-    padding: 20px 17px;
-  }
-  .repo-graph-toolbar {
-    gap: 8px;
-    padding-inline: 12px;
-  }
-  .repo-graph-search {
-    width: 140px;
-  }
-  .repo-graph-intro > span {
-    display: none;
-  }
-  .repo-snapshot-stats {
-    gap: 12px;
-  }
-}
-@media (max-width: 900px) {
-  .repo-workspace {
-    padding: 18px;
-  }
-  .repo-workspace-grid {
-    display: flex;
-    flex-direction: column;
-  }
-  .repo-incident-form {
-    order: -1;
-    border-left: 0;
-    border-bottom: 1px solid #dfe6d8;
-  }
-  .repo-app .repo-incident-form textarea#incident-description {
-    min-height: 110px;
-    max-height: 180px;
-  }
-  .repo-execution-note {
-    display: none;
-  }
-  .repo-graph-canvas {
-    height: 480px;
-  }
-  .repo-workspace-toolbar {
-    flex-wrap: wrap;
-  }
-  .repo-workspace-tools {
-    flex: 1;
-    justify-content: flex-end;
-  }
-  .repo-graph-explorer.expanded {
-    inset: 10px;
-  }
-}
-@media (max-width: 600px) {
-  .repo-header {
-    padding: 0 18px;
-    gap: 24px;
-  }
-  .repo-workspace {
-    padding: 16px 10px;
-  }
-  .repo-workspace-heading {
-    gap: 12px;
-  }
-  .repo-workspace-heading h1 {
-    font-size: 20px;
-  }
-  .repo-workspace-heading-actions {
-    padding-top: 28px;
-  }
-  .repo-workspace-tools {
-    justify-content: space-between;
-    flex-wrap: wrap;
-    width: 100%;
-    gap: 8px;
-  }
-  .repo-workspace-tools select {
-    max-width: 155px;
-  }
-  .repo-workspace-tools .repo-settings {
-    font-size: 10px;
-  }
-  .repo-settings[open] {
-    right: 0;
-    top: 35px;
+    grid-template-columns: 280px minmax(0, 1fr);
   }
   .repo-tabs {
-    gap: 24px;
-    padding: 0 17px;
+    gap: 20px;
+    padding-inline: 16px;
   }
-  .repo-tabs button {
-    font-size: 11px;
+  .repo-graph-instruction {
+    display: none;
   }
-  .repo-graph-intro {
-    padding: 17px;
+  .repo-graph-owner {
+    display: none;
   }
-  .repo-graph-toolbar {
-    flex-wrap: wrap;
+}
+@media (max-width: 760px) {
+  .repo-workspace {
+    padding: 0 10px 10px;
+  }
+  .repo-workspace-heading {
+    min-height: 48px;
+    gap: 8px;
+  }
+  .repo-workspace-heading h1 {
+    font-size: 13px;
+    letter-spacing: -0.2px;
+  }
+  .repo-project-meta {
+    font-size: 9px;
     gap: 5px;
   }
-  .repo-graph-search {
-    width: 110px;
+  .repo-project-meta span {
+    display: none;
   }
-  .repo-graph-scope button {
+  .repo-project-meta code {
+    font-size: 9px;
+    padding-inline: 3px;
+  }
+  .repo-workspace-tools {
+    gap: 2px;
+  }
+  .repo-workspace-tools select {
+    font-size: 10px;
+    padding-inline: 3px;
+    max-width: 65px;
+  }
+  .repo-workspace-tools > .repo-icon-button {
+    display: none;
+  }
+  .repo-settings-menu {
+    right: 0;
+  }
+  .repo-graph-explorer {
+    padding: 6px 0 8px;
+  }
+  .repo-graph-toolbar {
+    gap: 4px;
+    flex-wrap: wrap;
+  }
+  .repo-graph-mode button {
     padding: 6px;
     font-size: 10px;
   }
-  .repo-graph-scope button span {
-    margin-left: 4px;
+  .repo-graph-navigation {
+    margin-left: auto;
+  }
+  .repo-graph-navigation button {
+    width: 25px;
+  }
+  .repo-graph-search {
+    width: 120px;
   }
   .repo-graph-canvas {
-    height: 370px;
+    height: clamp(160px, 27dvh, 230px);
   }
-  .repo-graph-hint {
+  .repo-graph-selection {
+    padding: 0 3px;
+    gap: 7px;
+    min-height: 32px;
+  }
+  .repo-graph-selection > svg,
+  .repo-graph-relationship,
+  .repo-graph-patched {
     display: none;
   }
-  .repo-graph-legend {
-    padding: 12px;
-    gap: 10px;
+  .repo-graph-selection strong {
+    max-width: 62%;
+    font-size: 10px;
   }
-  .repo-graph-edge-count {
-    margin-left: 0;
-    width: 100%;
+  .repo-graph-open {
+    font-size: 10px;
+  }
+  .repo-graph-explorer.expanded {
+    inset: 8px;
+    padding: 8px;
+  }
+  .repo-workbench-toolbar {
+    flex-direction: column-reverse;
+    gap: 0;
+    padding: 0;
+  }
+  .repo-workbench-actions {
+    padding: 7px 10px 0;
+    justify-content: flex-end;
+  }
+  .repo-workbench-actions .repo-incident-toggle {
+    margin-right: auto;
+  }
+  .repo-tabs {
+    gap: 20px;
+    padding: 0 12px;
+  }
+  .repo-tabs button {
+    font-size: 11px;
+    padding: 13px 0 10px;
+  }
+  .repo-workspace-grid {
+    display: flex;
+    flex-direction: column;
+  }
+  .repo-investigation {
+    flex: 1;
+  }
+  .repo-incident-form {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    border: 0;
+    padding: 18px;
+    order: 0;
+  }
+  .repo-app .repo-incident-form textarea#incident-description {
+    min-height: 130px;
   }
   .repo-test-progress > div {
-    padding: 12px;
+    padding: 10px 12px;
   }
   .repo-test-progress strong {
     font-size: 11px;
@@ -874,9 +881,6 @@
   .repo-graph-method {
     padding: 15px;
   }
-  .repo-graph-method > summary {
-    font-size: 10px;
-  }
   .repo-graph-method > summary > span {
     display: block;
     float: none;
@@ -887,5 +891,26 @@
   }
   .repo-quick-examples summary > span {
     margin-left: 0;
+  }
+  .repo-graph-cap {
+    display: none;
+  }
+}
+@media (max-width: 520px) {
+  .repo-header {
+    padding: 0 18px;
+    gap: 24px;
+  }
+  .repo-graph-toolbar {
+    min-height: 58px;
+  }
+  .repo-graph-search {
+    order: 3;
+    width: 100%;
+    margin: 0;
+  }
+  .repo-graph-matches {
+    left: 0;
+    right: auto;
   }
 }

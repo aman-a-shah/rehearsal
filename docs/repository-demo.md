@@ -14,14 +14,16 @@ The graph makes those connections inspectable. In the verified run, FalkorDB sel
 | --- | --- | --- |
 | Example projects | Open `order-service`; the source indexes without an upload | “This is a working order service with checkout, coupons, refunds, accounting, and tests.” |
 | Incident brief | The one-cent coupon that produces a $3.00 charge instead of $2.99 | “The symptom appears in several places. I describe the expected behavior and keep the existing tests intact.” |
-| Graph evidence | Fit the graph; select `commerce/discounts.py`; inspect imports, dependents, owner, and source | “FalkorDB follows the dependency relationships to select the investigation context and permitted edit scope.” |
+| Persistent graph | Select `commerce/discounts.py`; switch to File connections to inspect its dependents, owner, and source | “FalkorDB follows the dependency relationships to select the investigation context and permitted edit scope.” |
 | Run rehearsal | Click Run; show baseline, graph traversal, generation, testing, and repeat verification in Activity | “Rehearsal executes the original suite before it proposes a repair. The model works from the actual failure output and connected source.” |
 | Tests | Original failure, candidate test output, and independent repeat | “The original suite has nine failures. The proposed repair passes all 46 tests, then passes again in a fresh sandbox.” Use the counts actually shown by your run. |
 | Patch | Review the allocation algorithm and changed-file count; collapse the incident panel for more space | “The patch allocates whole cents first, then distributes the remainder deterministically. The tests, tax logic, and public API stay intact.” Describe the actual generated diff. |
-| Graph evidence | Highlight patched source and compare All files with Investigation; expand the executed queries | “The patch changes this source file. Its dependents explain why checkout and refund tests matter, and these are the queries that selected that context.” |
+| Graph evidence | Keep the patched file visible above the executed queries; switch between Repository and File connections | “The patch changes this source file. Its dependents explain why checkout and refund tests matter, and these are the queries that selected that context.” |
 | Download | Download the verified patch and show the application command | “This is a proposed source change. I review it before applying it to my repository.” |
 
 The Patch tab is the actual generated unified diff. Green lines are additions; red lines are removals. Nothing is applied to the user's repository automatically. Verified means the configured tests passed in two fresh sandboxes, not that every possible production behavior is proven correct.
+
+The graph stays above every workbench tab while the evidence scrolls beneath it. The repository header is a single row with the snapshot identifier. Use **Incident** to reopen the brief; **Run rehearsal** stays beside the tabs. Selecting a file shows only its direct connections and leaves the rest of the map in place. Small screens keep readable file labels and let you pan or search instead of shrinking the entire repository into illegible text.
 
 Run one rehearsal before recording to check readiness. Showing saved evidence is fine if you describe it as a completed run. If you cut waiting time, label the cut. Keep the real failure, graph, patch, and passing output readable. Free-host workspaces reset when the service sleeps; download the patch and finish the recording before leaving.
 

@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   Code2,
   Focus,
   Maximize2,
@@ -10,62 +11,14 @@ import {
   X,
 } from "lucide-react";
 import type { CodeRun, RepoGraph } from "../repositoryTypes";
+import {
+  connectionLayout,
+  repositoryLayout,
+  routedConnection,
+  type Point,
+} from "./repositoryGraphLayout";
 
-type Point = { x: number; y: number };
 type View = Point & { scale: number };
-
-function layout(graph: RepoGraph, paths: Set<string>) {
-  const nodes = graph.nodes.filter((node) => paths.has(node.path));
-  const dependencies = new Map(
-    nodes.map((node) => [
-      node.path,
-      graph.edges
-        .filter((edge) => edge.source === node.path && paths.has(edge.target))
-        .map((edge) => edge.target),
-    ]),
-  );
-  const ranks = new Map<string, number>();
-  function rank(path: string, visiting = new Set<string>()): number {
-    if (ranks.has(path)) return ranks.get(path)!;
-    if (visiting.has(path)) return 0;
-    const branch = new Set([...visiting, path]);
-    const value = Math.min(
-      4,
-      Math.max(
-        -1,
-        ...(dependencies.get(path) || []).map((next) => rank(next, branch)),
-      ) + 1,
-    );
-    ranks.set(path, value);
-    return value;
-  }
-  nodes
-    .filter((node) => node.kind !== "test")
-    .forEach((node) => rank(node.path));
-  const last = Math.max(0, ...ranks.values()) + 1;
-  nodes
-    .filter((node) => node.kind === "test")
-    .forEach((node) => ranks.set(node.path, last));
-  const columns = Array.from({ length: last + 1 }, (_, index) =>
-    nodes
-      .filter((node) => ranks.get(node.path) === index)
-      .sort((a, b) => a.path.localeCompare(b.path)),
-  );
-  const height = Math.max(
-    250,
-    ...columns.map((column) => column.length * 56 + 64),
-  );
-  const positions = new Map<string, Point>();
-  columns.forEach((column, col) =>
-    column.forEach((node, row) =>
-      positions.set(node.path, {
-        x: col * 210 + 24,
-        y: (height - column.length * 56) / 2 + row * 56,
-      }),
-    ),
-  );
-  return { nodes, positions, width: columns.length * 210 + 24, height };
-}
 
 export default function RepositoryGraph({
   graph,
@@ -80,81 +33,128 @@ export default function RepositoryGraph({
 }) {
   const id = useId().replaceAll(":", "");
   const canvas = useRef<HTMLDivElement>(null);
-  const selection = useRef<HTMLElement>(null);
-  const [size, setSize] = useState({ width: 900, height: 500 });
+  const [size, setSize] = useState({ width: 1360, height: 280 });
   const [view, setView] = useState<View>({ x: 0, y: 0, scale: 1 });
-  const [selected, setSelected] = useState("");
+  const [selection, setSelection] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [scope, setScope] = useState("all");
+  const [mode, setMode] = useState("repository");
   const [expanded, setExpanded] = useState(false);
   const drag = useRef<{ origin: Point; view: View } | null>(null);
-  const fullGraph = useMemo(
-    () => graph.nodes.filter((node) => node.kind !== "document"),
+  const files = useMemo(
+    () =>
+      graph.nodes
+        .filter((node) => node.kind !== "document")
+        .sort((a, b) => a.path.localeCompare(b.path)),
     [graph],
   );
-  const drawing = useMemo(() => {
-    const allowed = new Set(
-      scope === "context" ? context?.files : fullGraph.map((node) => node.path),
+  const defaultFile = useMemo(() => {
+    const degree = new Map(files.map((file) => [file.path, 0]));
+    graph.edges.forEach((edge) => {
+      degree.set(edge.source, (degree.get(edge.source) || 0) + 1);
+      degree.set(edge.target, (degree.get(edge.target) || 0) + 1);
+    });
+    return (
+      files
+        .filter((file) => file.kind === "source")
+        .sort(
+          (a, b) =>
+            (degree.get(b.path) || 0) - (degree.get(a.path) || 0) ||
+            a.path.localeCompare(b.path),
+        )[0]?.path ||
+      files[0]?.path ||
+      ""
     );
-    // Keep the initial bounded rendering deterministic; disclose the cap in the UI.
-    const paths = [...fullGraph]
-      .filter((node) => allowed.has(node.path))
-      .sort(
-        (a, b) =>
-          Number(changed.includes(b.path)) - Number(changed.includes(a.path)) ||
-          Number(context?.seeds.includes(b.path)) -
-            Number(context?.seeds.includes(a.path)) ||
-          a.path.localeCompare(b.path),
-      )
-      .slice(0, 160)
-      .map((node) => node.path);
-    return layout(graph, new Set(paths));
-  }, [
-    graph,
-    fullGraph,
-    scope,
-    context?.files.join("|"),
-    context?.seeds.join("|"),
-    changed.join("|"),
-  ]);
-  const node = graph.nodes.find((item) => item.path === selected);
-  const neighbors = useMemo(
+  }, [files, graph]);
+  const selected =
+    selection ||
+    changed.find((path) => files.some((file) => file.path === path)) ||
+    context?.seeds.find((path) => files.some((file) => file.path === path)) ||
+    defaultFile;
+  const node = files.find((file) => file.path === selected);
+  const directEdges = graph.edges.filter(
+    (edge) => edge.source === selected || edge.target === selected,
+  );
+  const imports = directEdges
+    .filter((edge) => edge.source === selected)
+    .map((edge) => edge.target);
+  const consumers = directEdges
+    .filter((edge) => edge.target === selected)
+    .map((edge) => edge.source);
+  const neighbors = new Set([selected, ...imports, ...consumers]);
+  const matches = files.filter((file) =>
+    file.path.toLowerCase().includes(search.toLowerCase()),
+  );
+  const focused = mode === "connections";
+  const renderedFiles = useMemo(() => {
+    const selectedPaths = new Set([
+      selected,
+      ...graph.edges.flatMap((edge) =>
+        edge.source === selected
+          ? [edge.target]
+          : edge.target === selected
+            ? [edge.source]
+            : [],
+      ),
+    ]);
+    const relevant = focused
+      ? files.filter((file) => selectedPaths.has(file.path))
+      : files;
+    // Selection/search can bring any file into a bounded view of a large repository.
+    const chosen =
+      relevant.length > 160
+        ? [...relevant]
+            .sort(
+              (a, b) =>
+                Number(b.path === selected) - Number(a.path === selected) ||
+                Number(selectedPaths.has(b.path)) -
+                  Number(selectedPaths.has(a.path)) ||
+                a.path.localeCompare(b.path),
+            )
+            .slice(0, 160)
+        : relevant;
+    return chosen.sort((a, b) => a.path.localeCompare(b.path));
+  }, [files, graph, focused, files.length > 160 || focused ? selected : ""]);
+  const drawing = useMemo(
     () =>
-      new Set([
-        selected,
-        ...graph.edges.flatMap((edge) =>
-          edge.source === selected
-            ? [edge.target]
-            : edge.target === selected
-              ? [edge.source]
-              : [],
-        ),
-      ]),
-    [graph, selected],
+      focused
+        ? connectionLayout(renderedFiles, selected, imports, consumers)
+        : repositoryLayout(renderedFiles, size.width),
+    [renderedFiles, focused, size.width, focused ? selected : ""],
   );
-  const matches = fullGraph.filter((item) =>
-    item.path.toLowerCase().includes(search.toLowerCase()),
-  );
-  const visibleEdges = graph.edges.filter(
+  const edges = directEdges.filter(
     (edge) =>
       drawing.positions.has(edge.source) && drawing.positions.has(edge.target),
   );
+  const owners = graph.ownership
+    .filter((owner) => owner.path === selected)
+    .map((owner) => owner.name);
 
   function fit() {
-    const scale = Math.min(
-      1.2,
-      (size.width - 36) / drawing.width,
-      (size.height - 36) / drawing.height,
+    // Keep labels readable. If a very large graph cannot fit, it remains pannable.
+    const scale = Math.max(
+      0.9,
+      Math.min(
+        1,
+        (size.width - 12) / drawing.width,
+        (size.height - 12) / drawing.height,
+      ),
     );
+    const point = drawing.positions.get(selected);
     setView({
       scale,
-      x: (size.width - drawing.width * scale) / 2,
-      y: (size.height - drawing.height * scale) / 2,
+      x:
+        point && drawing.width * scale > size.width
+          ? size.width / 2 - (point.x + point.width / 2) * scale
+          : Math.max(8, (size.width - drawing.width * scale) / 2),
+      y:
+        point && drawing.height * scale > size.height
+          ? size.height / 2 - (point.y + point.height / 2) * scale
+          : Math.max(8, (size.height - drawing.height * scale) / 2),
     });
   }
   function zoom(factor: number) {
     setView((previous) => {
-      const scale = Math.max(0.15, Math.min(2.5, previous.scale * factor));
+      const scale = Math.max(0.35, Math.min(2.5, previous.scale * factor));
       const ratio = scale / previous.scale;
       return {
         scale,
@@ -164,15 +164,15 @@ export default function RepositoryGraph({
     });
   }
   function select(path: string, center = false) {
-    setSelected(path);
-    if (center) {
+    setSelection(path);
+    if (center && !focused) {
       const point = drawing.positions.get(path);
       if (point)
-        setView({
-          scale: 1.1,
-          x: size.width / 2 - (point.x + 84) * 1.1,
-          y: size.height / 2 - (point.y + 23) * 1.1,
-        });
+        setView((previous) => ({
+          ...previous,
+          x: size.width / 2 - (point.x + point.width / 2) * previous.scale,
+          y: size.height / 2 - (point.y + point.height / 2) * previous.scale,
+        }));
     }
   }
   useEffect(() => {
@@ -185,8 +185,29 @@ export default function RepositoryGraph({
   }, []);
   useEffect(fit, [size.width, size.height, drawing]);
   useEffect(() => {
-    if (selected) selection.current?.scrollIntoView({ block: "nearest" });
-  }, [selected]);
+    if (selection) return;
+    const point = drawing.positions.get(selected);
+    if (!point) return;
+    // A small viewport cannot show the entire repository at a readable scale.
+    // Follow newly investigated/patched files only if they move out of view.
+    setView((previous) => {
+      const left = point.x * previous.scale + previous.x;
+      const top = point.y * previous.scale + previous.y;
+      const right = left + point.width * previous.scale;
+      const bottom = top + point.height * previous.scale;
+      const x =
+        left < 0 || right > size.width
+          ? size.width / 2 - (point.x + point.width / 2) * previous.scale
+          : previous.x;
+      const y =
+        top < 0 || bottom > size.height
+          ? size.height / 2 - (point.y + point.height / 2) * previous.scale
+          : previous.y;
+      return x === previous.x && y === previous.y
+        ? previous
+        : { ...previous, x, y };
+    });
+  }, [selected, selection, drawing, size.width, size.height]);
   useEffect(() => {
     if (!expanded) return;
     const escape = (event: KeyboardEvent) => {
@@ -197,23 +218,26 @@ export default function RepositoryGraph({
   }, [expanded]);
 
   return (
-    <div className={`repo-graph-explorer ${expanded ? "expanded" : ""}`}>
+    <section
+      className={`repo-graph-explorer ${expanded ? "expanded" : ""}`}
+      aria-label="Repository dependency graph"
+    >
       <div className="repo-graph-toolbar">
-        <div className="repo-graph-scope" aria-label="Graph scope">
-          <button
-            aria-pressed={scope === "all"}
-            onClick={() => setScope("all")}
-          >
-            All files <span>{fullGraph.length}</span>
+        <div className="repo-graph-mode" aria-label="Graph view">
+          <button aria-pressed={!focused} onClick={() => setMode("repository")}>
+            Repository
           </button>
           <button
-            aria-pressed={scope === "context"}
-            disabled={!context}
-            onClick={() => setScope("context")}
+            aria-pressed={focused}
+            onClick={() => setMode("connections")}
+            disabled={!node}
           >
-            Investigation <span>{context?.files.length ?? "—"}</span>
+            File connections
           </button>
         </div>
+        <span className="repo-graph-instruction">
+          Select a file to trace its connections
+        </span>
         <div className="repo-graph-search">
           <Search size={14} />
           <input
@@ -221,38 +245,50 @@ export default function RepositoryGraph({
             placeholder="Find a file…"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Escape") setSearch("");
+            }}
           />
           {search && (
             <div className="repo-graph-matches">
-              {matches.slice(0, 12).map((item) => (
+              {matches.slice(0, 12).map((file) => (
                 <button
-                  key={item.path}
+                  key={file.path}
                   onClick={() => {
-                    setScope("all");
-                    select(item.path, true);
+                    select(file.path, true);
                     setSearch("");
                   }}
                 >
-                  {item.path}
+                  {file.path}
                 </button>
               ))}
               {!matches.length && <p>No matching files.</p>}
             </div>
           )}
         </div>
-        <button
-          className="repo-icon-button"
-          aria-label={expanded ? "Exit expanded graph" : "Expand graph"}
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-        </button>
+        <div className="repo-graph-navigation">
+          <button aria-label="Zoom out" onClick={() => zoom(1 / 1.2)}>
+            <Minus size={14} />
+          </button>
+          <button aria-label="Zoom in" onClick={() => zoom(1.2)}>
+            <Plus size={14} />
+          </button>
+          <button aria-label="Fit graph to view" onClick={fit}>
+            <Focus size={15} />
+          </button>
+          <button
+            aria-label={expanded ? "Exit expanded graph" : "Expand graph"}
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+          </button>
+        </div>
       </div>
       <div className="repo-graph-canvas" ref={canvas}>
         <svg
           viewBox={`0 0 ${size.width} ${size.height}`}
           role="group"
-          aria-label="Interactive repository dependency graph. Select a file to inspect its relationships."
+          aria-label="Dependency map. Only connections to the selected file are drawn. Drag to pan; plus and minus zoom."
           tabIndex={0}
           onKeyDown={(event) => {
             if (event.target !== event.currentTarget) return;
@@ -319,14 +355,6 @@ export default function RepositoryGraph({
           }}
         >
           <defs>
-            <pattern
-              id={`${id}-dots`}
-              width="20"
-              height="20"
-              patternUnits="userSpaceOnUse"
-            >
-              <circle cx="1" cy="1" r="0.7" fill="#ced8cd" />
-            </pattern>
             <marker
               id={`${id}-arrow`}
               markerWidth="7"
@@ -335,195 +363,155 @@ export default function RepositoryGraph({
               refY="3.5"
               orient="auto"
             >
-              <path d="M1,1 L6,3.5 L1,6" fill="none" stroke="context-stroke" />
+              <path
+                d="M1,1 L6,3.5 L1,6"
+                fill="none"
+                stroke="#52745b"
+                strokeWidth="1.2"
+              />
             </marker>
           </defs>
-          <rect width="100%" height="100%" fill={`url(#${id}-dots)`} />
           <g transform={`translate(${view.x} ${view.y}) scale(${view.scale})`}>
-            {visibleEdges.map((edge) => {
-              const a = drawing.positions.get(edge.source)!,
-                b = drawing.positions.get(edge.target)!;
-              const sameColumn = a.x === b.x;
-              const from = {
-                x: a.x + (sameColumn || a.x < b.x ? 168 : 0),
-                y: a.y + 24,
-              };
-              const to = { x: b.x + (a.x >= b.x ? 168 : 0), y: b.y + 24 };
-              const bend = sameColumn ? from.x + 26 : (from.x + to.x) / 2;
-              const highlight =
-                selected &&
-                (edge.source === selected || edge.target === selected);
-              return (
-                <path
-                  key={`${edge.source}:${edge.target}`}
-                  className={`repo-graph-edge ${highlight ? "selected" : selected ? "dimmed" : ""}`}
-                  d={`M${from.x},${from.y} C${bend},${from.y} ${bend},${to.y} ${to.x},${to.y}`}
-                  markerEnd={`url(#${id}-arrow)`}
-                />
-              );
-            })}
-            {drawing.nodes.map((item) => {
-              const point = drawing.positions.get(item.path)!;
-              const modified = changed.includes(item.path),
-                seed = context?.seeds.includes(item.path),
-                included = context?.files.includes(item.path);
-              const dimmed =
-                (selected && !neighbors.has(item.path)) ||
-                (search &&
-                  !item.path.toLowerCase().includes(search.toLowerCase()));
-              const parts = item.path.split("/"),
+            {drawing.headings.map((heading) => (
+              <text
+                key={heading.text}
+                x={heading.x}
+                y={heading.y}
+                className="repo-graph-group-label"
+              >
+                {heading.text}
+              </text>
+            ))}
+            {edges.map((edge, index) => (
+              <path
+                key={`${edge.source}:${edge.target}`}
+                data-source={edge.source}
+                data-target={edge.target}
+                className="repo-graph-edge"
+                d={routedConnection(
+                  drawing.positions.get(edge.source)!,
+                  drawing.positions.get(edge.target)!,
+                  index,
+                  focused,
+                )}
+                markerEnd={`url(#${id}-arrow)`}
+              />
+            ))}
+            {renderedFiles.map((file) => {
+              const point = drawing.positions.get(file.path);
+              if (!point) return null;
+              const modified = changed.includes(file.path),
+                chosen = selected === file.path;
+              const parts = file.path.split("/"),
                 basename = parts.pop()!;
-              const filenameLabel =
-                basename.length > 20 ? basename.slice(0, 18) + "…" : basename;
-              const directoryLabel =
-                (parts.join("/") || "root").slice(-25) +
-                (modified ? " · changed" : "");
+              const length = Math.floor((point.width - 32) / 7.3);
+              const filename =
+                basename.length > length
+                  ? basename.slice(0, length - 1) + "…"
+                  : basename;
+              const directory = (parts.join("/") || "root").slice(
+                -Math.floor((point.width - 28) / 5.7),
+              );
               return (
                 <g
-                  data-file={item.path}
-                  key={item.path}
+                  key={file.path}
+                  data-file={file.path}
                   transform={`translate(${point.x} ${point.y})`}
                   role="button"
                   tabIndex={0}
-                  aria-label={`Inspect ${filenameLabel} ${directoryLabel} (${item.path})`}
-                  aria-pressed={selected === item.path}
-                  className={`repo-graph-file ${item.kind} ${modified ? "changed" : seed ? "seed" : included ? "included" : ""} ${selected === item.path ? "selected" : ""} ${dimmed ? "dimmed" : ""}`}
-                  onClick={() =>
-                    select(selected === item.path ? "" : item.path)
-                  }
+                  aria-label={`Inspect ${filename} ${directory} (${file.path})`}
+                  aria-pressed={chosen}
+                  className={`repo-graph-file ${file.kind} ${modified ? "changed" : ""} ${chosen ? "selected" : neighbors.has(file.path) ? "connected" : ""}`}
+                  onClick={() => select(file.path)}
                   onKeyDown={(event) => {
                     if (event.key === "Enter" || event.key === " ") {
                       event.preventDefault();
-                      select(item.path);
+                      select(file.path);
                     }
                   }}
                 >
-                  <title>{item.path}</title>
-                  <rect width="168" height="48" rx="5" />
-                  <circle cx="13" cy="17" r="3" />
-                  <text x="24" y="21" className="repo-graph-filename">
-                    {filenameLabel}{" "}
+                  <title>
+                    {file.path}
+                    {modified ? " — changed by selected patch" : ""}
+                    {context?.editable.includes(file.path)
+                      ? " — in repair scope"
+                      : ""}
+                  </title>
+                  <rect width={point.width} height={point.height} rx="4" />
+                  <circle cx="12" cy="15" r="2.6" />
+                  <text x="24" y="18" className="repo-graph-filename">
+                    {filename}{" "}
                   </text>
                   <text
                     x="24"
-                    y="36"
+                    y="32"
                     className="repo-graph-directory"
                     aria-hidden="true"
                   >
-                    {directoryLabel}
+                    {directory}
                   </text>
+                  {modified && (
+                    <path
+                      className="repo-graph-patch-mark"
+                      d={`M${point.width - 12},29 l2,2 l4,-5`}
+                    />
+                  )}
                 </g>
               );
             })}
           </g>
         </svg>
-        {!drawing.nodes.length && (
+        {!renderedFiles.length && (
           <p className="repo-graph-empty">
-            No code files are available in this view.
+            No code files were found in this snapshot.
           </p>
         )}
-        <div className="repo-graph-navigation">
-          <button aria-label="Zoom out" onClick={() => zoom(1 / 1.25)}>
-            <Minus size={15} />
-          </button>
-          <span>{Math.round(view.scale * 100)}%</span>
-          <button aria-label="Zoom in" onClick={() => zoom(1.25)}>
-            <Plus size={15} />
-          </button>
-          <button aria-label="Fit graph to view" onClick={fit}>
-            <Focus size={16} />
-          </button>
-        </div>
-        <span className="repo-graph-hint">
-          Drag to pan · + / − to zoom · select a file
-        </span>
       </div>
-      <div className="repo-graph-legend">
-        <span>
-          <i className="source" /> Source
-        </span>
-        <span>
-          <i className="test" /> Test
-        </span>
-        {context && (
+      <div
+        className="repo-graph-selection"
+        role="group"
+        aria-label="Selected file"
+      >
+        {node ? (
           <>
-            <span>
-              <i className="seed" /> Starting point
+            <Code2 size={14} />
+            <strong title={node.path}>{node.path}</strong>
+            <span className="repo-graph-relationship">
+              Imported by <b>{consumers.length}</b> · Imports{" "}
+              <b>{imports.length}</b>
             </span>
-            <span>
-              <i className="included" /> In context
-            </span>
+            {changed.includes(node.path) && (
+              <span className="repo-graph-patched">Patched</span>
+            )}
+            {owners.length > 0 && (
+              <span className="repo-graph-owner">{owners.join(", ")}</span>
+            )}
+            <button
+              className="repo-graph-open"
+              onClick={() => onFile(node.path)}
+            >
+              View source <ArrowRight size={13} />
+            </button>
+            {selection && (
+              <button
+                className="repo-icon-button"
+                aria-label="Follow the repair automatically"
+                title="Follow the repair automatically"
+                onClick={() => setSelection(null)}
+              >
+                <X size={13} />
+              </button>
+            )}
           </>
+        ) : (
+          <span>Select a source file to inspect its dependencies.</span>
         )}
-        {!!changed.length && (
-          <span>
-            <i className="changed" /> Patched
+        {files.length > 160 && (
+          <span className="repo-graph-cap">
+            160-file view · search any file
           </span>
         )}
-        <span className="repo-graph-edge-count">
-          {drawing.nodes.length} files · {visibleEdges.length} imports · arrows
-          point to dependencies
-          {fullGraph.length > 160 ? " · view capped at 160 files" : ""}
-        </span>
       </div>
-      {node && (
-        <section
-          ref={selection}
-          className="repo-graph-selection"
-          aria-label="Selected file"
-        >
-          <div>
-            <Code2 size={17} />
-            <strong>{node.path}</strong>
-            <button
-              className="repo-icon-button"
-              aria-label="Clear file selection"
-              onClick={() => setSelected("")}
-            >
-              <X size={15} />
-            </button>
-          </div>
-          <p>
-            {node.lines} lines ·{" "}
-            {node.editable ? "Source file" : "Protected test or configuration"}
-            {context?.editable.includes(node.path)
-              ? " · Eligible for repair"
-              : ""}
-            {changed.includes(node.path) ? " · Changed by selected patch" : ""}
-          </p>
-          <div className="repo-graph-file-detail">
-            <span>
-              Imports{" "}
-              <b>
-                {graph.edges.filter((edge) => edge.source === node.path).length}
-              </b>
-            </span>
-            <span>
-              Imported by{" "}
-              <b>
-                {graph.edges.filter((edge) => edge.target === node.path).length}
-              </b>
-            </span>
-            {graph.ownership
-              .filter((owner) => owner.path === node.path)
-              .map((owner) => (
-                <span key={owner.name}>{owner.name}</span>
-              ))}
-            <button className="repo-button" onClick={() => onFile(node.path)}>
-              View source <Code2 size={13} />
-            </button>
-          </div>
-          <div className="repo-graph-neighbors">
-            {[...neighbors]
-              .filter((path) => path !== node.path)
-              .map((path) => (
-                <button key={path} onClick={() => select(path)}>
-                  {path}
-                </button>
-              ))}
-          </div>
-        </section>
-      )}
-    </div>
+    </section>
   );
 }

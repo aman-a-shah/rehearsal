@@ -4,7 +4,7 @@ Import a GitHub repository or upload a ZIP, describe a bug, and review a patch t
 
 <p align="center">
   <a href="docs/screenshots/repository-repair.png">
-    <img src="docs/screenshots/repository-repair.png" width="900" alt="A live order-service rehearsal: the graph connects 28 code and test files and highlights the generated discount-allocation repair.">
+    <img src="docs/screenshots/repository-repair.png" width="900" alt="A completed order-service repair: the dependency map stays visible above the verified patch and test results.">
   </a>
 </p>
 
@@ -23,7 +23,7 @@ Two complete example services require no upload or GitHub account:
 | Harbor order service · Python | 30 / 38 | Discount rounding breaks checkout, refunds, and ledger reconciliation | One source file; all 46 tests pass twice |
 | Atlas event service · Node.js | 28 / 32 | Tied timestamps and imprecise IDs break feeds, exports, and credit replay | Two source files; all 37 tests pass twice |
 
-**Graph evidence** provides a searchable, zoomable dependency map with investigation context, changed files, ownership, and executed queries. **Patch** shows the proposed code fix; **Tests** shows the original failure, candidate execution, and fresh repeat. The incident panel collapses to give these views the full workspace.
+The dependency map stays visible above **Activity**, **Tests**, and **Patch**. Select a file to trace its direct imports and dependents without drawing every connection at once; **File connections** isolates that neighborhood. Search, zoom, source inspection, and changed-file highlighting are available throughout a run. **Graph evidence** contains the investigation context and executed queries. The incident brief collapses while the run controls remain accessible.
 
 Three smaller starters cover rounding, pagination, and a timeout bug that needs a new regression test. All example repairs are generated at runtime. The earlier [guided operational incident](docs/guided-workspace.md), including its diagrams and policy examples, remains available from **Guided example**.
 

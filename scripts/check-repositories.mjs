@@ -2,7 +2,7 @@ import { createRequire } from "node:module";
 import { mkdir, writeFile } from "node:fs/promises";
 import assert from "node:assert/strict";
 const require = createRequire(new URL("../web/package.json", import.meta.url));
-const { chromium } = require("@playwright/test");
+const { chromium, expect } = require("@playwright/test");
 const url = process.env.REHEARSAL_CHECK_URL || "http://127.0.0.1:8786";
 if (!["localhost", "127.0.0.1"].includes(new URL(url).hostname))
   throw new Error("Run this verification against a local test workspace.");
@@ -60,6 +60,190 @@ try {
   console.log(
     "Imported code, graph, source inspection, and run commands verified.",
   );
+  const graph = page.getByRole("region", {
+    name: "Repository dependency graph",
+    exact: true,
+  });
+  const graphBox = await graph.boundingBox();
+  const graphTransform = () =>
+    page.locator(".repo-graph-canvas > svg > g").getAttribute("transform");
+  const selectedFile = () =>
+    page
+      .locator('.repo-graph-file[aria-pressed="true"]')
+      .getAttribute("data-file");
+  const selection = await selectedFile();
+  const transform = await graphTransform();
+  for (const name of [
+    "Activity",
+    "Tests",
+    "Patch",
+    "Graph evidence",
+    "Overview",
+  ]) {
+    await page.getByRole("button", { name, exact: true }).click();
+    await expect(graph).toBeVisible();
+    assert.deepEqual(
+      await graph.boundingBox(),
+      graphBox,
+      "Changing tabs moved the graph",
+    );
+    assert.equal(
+      await graphTransform(),
+      transform,
+      "Changing tabs reset the graph viewport",
+    );
+    assert.equal(
+      await selectedFile(),
+      selection,
+      "Changing tabs reset the selected file",
+    );
+  }
+  // Exercise the running UI without model/sandbox usage. These staged responses
+  // are layout fixtures, not evidence of a successful repair.
+  if (!live) {
+    const projectId = new URL(page.url()).hash.split("/")[1];
+    const baseline = {
+      exit_code: 1,
+      test_count: 46,
+      duration_ms: 100,
+      test_command: "python -m unittest discover -s tests -v",
+      setup_output: "",
+      output: "UI fixture: failing check\n".repeat(60),
+    };
+    let staged = {
+      id: "ui-layout-check",
+      project_id: projectId,
+      status: "running",
+      stage: "baseline",
+      incident: "UI fixture",
+      candidates: [],
+      recommended: null,
+      events: [
+        {
+          stage: "baseline",
+          message: "UI fixture: running original checks",
+          at: Date.now() / 1000,
+        },
+      ],
+    };
+    await page.route("**/api/code/projects/*/runs", (route) =>
+      route.fulfill({ json: staged }),
+    );
+    await page.route("**/api/code/runs/ui-layout-check", (route) =>
+      route.fulfill({ json: staged }),
+    );
+    await page
+      .getByRole("button", { name: "Run rehearsal", exact: true })
+      .click();
+    await expect(
+      page.getByRole("button", { name: "Stop rehearsal", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("UI fixture: running original checks", { exact: true }),
+    ).toBeVisible();
+    assert.equal(await page.locator("#repo-incident-panel").isVisible(), false);
+    assert.deepEqual(
+      await graph.boundingBox(),
+      graphBox,
+      "Starting a run moved the graph",
+    );
+    staged = {
+      ...staged,
+      baseline,
+      stage: "generating",
+      events: [
+        ...staged.events,
+        {
+          stage: "graph",
+          message: "UI fixture: traversing imports",
+          at: Date.now() / 1000,
+        },
+      ],
+      context: {
+        seeds: ["commerce/totals.py"],
+        files: ["commerce/totals.py", "commerce/discounts.py"],
+        editable: ["commerce/discounts.py"],
+        affected_tests: ["tests/test_discounts.py"],
+        owners: [],
+        queries: [],
+        omitted_files: 0,
+      },
+    };
+    await expect(
+      page.getByText("UI fixture: traversing imports", { exact: true }),
+    ).toBeVisible({ timeout: 10000 });
+    assert.equal(
+      await selectedFile(),
+      selection,
+      "Polling replaced the manual file selection",
+    );
+    assert.equal(
+      await graphTransform(),
+      transform,
+      "Polling reset graph pan/zoom",
+    );
+    await page
+      .getByRole("button", { name: "Follow the repair automatically" })
+      .click();
+    await expect(
+      page.locator('.repo-graph-file[aria-pressed="true"]'),
+    ).toHaveAttribute("data-file", "commerce/totals.py");
+    await page.locator('[data-file="commerce/discounts.py"]').click();
+    await page.getByRole("button", { name: "Tests", exact: true }).click();
+    await page.locator(".repo-evidence").evaluate((element) => {
+      element.scrollTop = element.scrollHeight;
+    });
+    await page
+      .locator(".repo-log pre")
+      .first()
+      .evaluate((element) => {
+        element.scrollTop = element.scrollHeight;
+      });
+    assert.deepEqual(
+      await graph.boundingBox(),
+      graphBox,
+      "Scrolling tests moved the graph",
+    );
+    await expect(graph).toBeInViewport({ ratio: 1 });
+    staged = {
+      ...staged,
+      status: "review",
+      stage: "complete",
+      recommended: "1",
+      candidates: [
+        {
+          id: "1",
+          title: "UI fixture patch",
+          reason: "A layout fixture, not a generated repair.",
+          status: "verified",
+          changes: { "commerce/discounts.py": "# UI fixture" },
+          patch:
+            "diff --git a/commerce/discounts.py b/commerce/discounts.py\n@@ -1 +1 @@\n-old\n+new",
+          trial: { ...baseline, exit_code: 0 },
+          verification: { ...baseline, exit_code: 0 },
+        },
+      ],
+    };
+    await expect(
+      page.getByRole("button", { name: "Stop rehearsal", exact: true }),
+    ).toHaveCount(0, { timeout: 10000 });
+    await page.getByRole("button", { name: /^Patch/ }).click();
+    await expect(
+      page.getByRole("heading", { name: "UI fixture patch" }),
+    ).toBeVisible();
+    await expect(graph).toBeInViewport({ ratio: 1 });
+    assert.deepEqual(
+      await graph.boundingBox(),
+      graphBox,
+      "Finishing a run moved the graph",
+    );
+    await page.getByRole("button", { name: "Incident", exact: true }).click();
+    await expect(page.locator("#incident-description")).toBeVisible();
+    await page.getByRole("button", { name: "Incident", exact: true }).click();
+    console.log(
+      "Staged UI run: graph stays visible through polling, tests, patch review, scrolling, and incident toggles.",
+    );
+  }
   if (live) {
     await page
       .getByRole("button", { name: "Run rehearsal", exact: true })
