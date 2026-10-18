@@ -106,7 +106,7 @@ def create_app(engine=None, runner_factory=Runner):
     app.state.access, app.state.limits = access, limits
     app.state.repositories = repositories
     install_routes(app, repositories)
-    install_demo(app, limits)
+    install_demo(app)
     frontend_host = urlparse(os.getenv("REHEARSAL_APP_ORIGIN", "")).hostname
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"] + ([parsed_origin.hostname] if public_origin else []) + ([frontend_host] if frontend_host else [])

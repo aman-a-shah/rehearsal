@@ -19,10 +19,6 @@ services:
         value: "4"
       - key: REHEARSAL_REPO_PEER_RUNS_PER_DAY
         value: "12"
-      - key: REHEARSAL_DEMO_INVITE
-        sync: false
-      - key: REHEARSAL_DEMO_EXPIRES_AT
-        sync: false
       - key: REHEARSAL_APP_ORIGIN
         sync: false
       - key: REHEARSAL_SESSION_KEY

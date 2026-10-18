@@ -1,6 +1,6 @@
 # Record a repository repair
 
-Open the private invitation link and choose **Harbor / order-service** under the example projects. It imports a runnable Python service: 30 files, 38 import relationships, and 46 tests. The incident and test command are already filled in. No upload or GitHub sign-in is needed.
+Open the deployment URL and choose **Harbor / order-service** under the example projects. It imports a runnable Python service: 30 files, 38 import relationships, and 46 tests. The incident and test command are already filled in. No invitation, upload, or GitHub sign-in is needed.
 
 ## What the example demonstrates
 

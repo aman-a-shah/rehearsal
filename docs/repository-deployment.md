@@ -6,13 +6,13 @@ The website and API are independently deployable. The API uses a long-lived work
 
 Use [render-demo.yaml](../render-demo.yaml) for a **Free** Render service with no persistent disk. This is a separate deployment choice from the paid configuration below. Vercel serves the website and proxies API requests to that free service. No hosting payment method is required; model calls and sandboxes still use the connected providers' existing allowances.
 
-Set `REHEARSAL_DEMO_INVITE` to a random 48+ character value, `REHEARSAL_DEMO_EXPIRES_AT` to a fixed Unix expiry timestamp, and `REHEARSAL_TEMPORARY_DEMO=1`. Share `<website-origin>/#invite=<value>` privately. The browser exchanges the fragment for a signed Secure, HttpOnly cookie and removes it from the URL. The invitation never enters the public source or frontend build. Protected API routes require access; health and invitation endpoints remain available. The website sends `noindex` headers. Invitations expire even if the server restarts.
+Set `REHEARSAL_TEMPORARY_DEMO=1` and share the website's ordinary URL. Visitors open the workspace directly, with no invitation code or preview expiry. Old invitation URLs still open the workspace, and legacy `REHEARSAL_DEMO_INVITE` and `REHEARSAL_DEMO_EXPIRES_AT` settings are ignored and can be removed. The website sends `noindex` headers. Repository sessions, project ownership, operator access, and usage limits still apply.
 
 Public GitHub URLs, ZIP uploads, and five built-in examples work without GitHub OAuth registration. Guests can download verified patches. The demo permits four runs per guest, with shared hourly, daily, model-call, and sandbox limits. GitHub sign-in and draft PR publication remain optional additional configuration.
 
-Render's free service sleeps after 15 idle minutes, takes roughly a minute to wake, and discards local source, sessions, graph data, run history, and quota counters on sleep/restart. The invitation cookie remains valid, but visitors start a new workspace. Keep the page open until the run finishes and download patches before leaving. The page retries during startup. Keep the invitation limited to judges; this configuration is temporary and does not provide durable storage or durable cross-restart usage accounting. See [Render's documented limits](https://render.com/docs/free).
+Render's free service sleeps after 15 idle minutes, takes roughly a minute to wake, and discards local source, sessions, graph data, run history, and quota counters on sleep/restart. Visitors then start a new workspace. Keep the page open until the run finishes and download patches before leaving. The page retries during startup. This configuration is temporary and does not provide durable storage or durable cross-restart usage accounting. See [Render's documented limits](https://render.com/docs/free).
 
-To end the preview, suspend/delete the free service or let the invitation expire. Do not upgrade it or attach a disk for the temporary preview.
+To end the preview, suspend/delete the free service. Do not upgrade it or attach a disk for the temporary preview.
 
 ## Persistent API
 

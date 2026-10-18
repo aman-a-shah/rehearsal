@@ -109,7 +109,7 @@ This version supports text-based Python and Node.js/TypeScript repositories with
 
 Deployment uses **Vercel for the website**, **one persistent API container** for accounts, source, queue, and FalkorDB, and **Vercel microVMs** for untrusted code. A Render blueprint is included. See [deployment and GitHub setup](docs/repository-deployment.md).
 
-For temporary judging, [render-demo.yaml](render-demo.yaml) uses Render's free tier and an expiring invitation link. Judges can import a public repository, upload a ZIP, or try an example without signing in. Workspaces reset when the free service sleeps; download patches before leaving. This option needs no hosting subscription and uses the connected model/sandbox allowances.
+For temporary judging, [render-demo.yaml](render-demo.yaml) uses Render's free tier. The ordinary website URL opens the workspace directly: visitors can import a public repository, upload a ZIP, or try an example without an invitation or sign-in. Workspaces reset when the free service sleeps; download patches before leaving. This option needs no hosting subscription and uses the connected model/sandbox allowances.
 
 GitHub OAuth uses state and PKCE. Sessions are opaque, server-stored, and HttpOnly; GitHub tokens are encrypted at rest. Repository endpoints enforce workspace ownership. Provider and GitHub credentials never enter test sandboxes. Persistent quotas reserve usage before execution. See [repository security](docs/repository-security.md).
 
