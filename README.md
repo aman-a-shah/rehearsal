@@ -16,7 +16,7 @@ Import a GitHub repository or upload a ZIP, describe a bug, and review a patch t
 4. Inspect candidate diffs, executed graph queries, the original failure, and passing test logs. The selected patch must pass a second fresh sandbox run without reducing the reported test count.
 5. Download the patch or approve a draft pull request. Publishing requires GitHub write access and rechecks that the base branch still matches the tested commit. Rehearsal does not merge or deploy changes to your application.
 
-The two included starter repositories contain actual Python and Node.js bugs. Their repairs are generated at runtime. The earlier [guided operational incident](docs/guided-workspace.md), including its diagrams and policy examples, remains available from **Guided example**.
+Three included starters cover Python rounding, Node.js pagination, and a Python timeout bug that needs a new regression test. Their repairs are generated at runtime. The earlier [guided operational incident](docs/guided-workspace.md), including its diagrams and policy examples, remains available from **Guided example**.
 
 You can also import the public [Python pricing repository](https://github.com/aman-a-shah/rehearsal-python-example) or [Node event-feed repository](https://github.com/aman-a-shah/rehearsal-node-example). Their default branches intentionally retain the bugs. Real cloud-verified repairs are available as draft PRs: [Python](https://github.com/aman-a-shah/rehearsal-python-example/pull/1), [Node](https://github.com/aman-a-shah/rehearsal-node-example/pull/1).
 
@@ -99,6 +99,8 @@ Implementation: [graph extraction and queries](server/repos/codegraph.py), [orch
 This version supports text-based Python and Node.js/TypeScript repositories with self-contained tests. Archives are limited to 12 MB compressed, 24 MB expanded, and 1,800 imported files. Binary files, credential files, links, and files over 512 KB are excluded or rejected. The UI lists excluded files. Tests requiring production secrets, internet services, databases, or an unsupported runtime need a dedicated runner configuration. Passing tests do not establish production correctness.
 
 Deployment uses **Vercel for the website**, **one persistent API container** for accounts, source, queue, and FalkorDB, and **Vercel microVMs** for untrusted code. A Render blueprint is included. See [deployment and GitHub setup](docs/repository-deployment.md).
+
+For temporary judging, [render-demo.yaml](render-demo.yaml) uses Render's free tier and an expiring invitation link. Judges can import a public repository, upload a ZIP, or try an example without signing in. Workspaces reset when the free service sleeps; download patches before leaving. This option needs no hosting subscription and uses the connected model/sandbox allowances.
 
 GitHub OAuth uses state and PKCE. Sessions are opaque, server-stored, and HttpOnly; GitHub tokens are encrypted at rest. Repository endpoints enforce workspace ownership. Provider and GitHub credentials never enter test sandboxes. Persistent quotas reserve usage before execution. See [repository security](docs/repository-security.md).
 

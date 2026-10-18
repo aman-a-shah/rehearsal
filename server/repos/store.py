@@ -159,8 +159,8 @@ class Store:
                 raise Problem("run_busy", "A rehearsal is already running. Wait for it to finish before starting another.", 409)
             self._reserve(db, "run", "global", positive_int("REHEARSAL_REPO_RUNS_PER_DAY", 12))
             self._reserve(db, "run-hour", "global", positive_int("REHEARSAL_REPO_RUNS_PER_HOUR", 4), 3600)
-            self._reserve(db, "run-user", user["id"], 3 if user.get("github_id") else 1)
-            self._reserve(db, "run-peer", peer, 4)
+            self._reserve(db, "run-user", user["id"], 3 if user.get("github_id") else positive_int("REHEARSAL_REPO_GUEST_RUNS_PER_DAY", 1))
+            self._reserve(db, "run-peer", peer, positive_int("REHEARSAL_REPO_PEER_RUNS_PER_DAY", 4))
             db.execute("INSERT INTO records VALUES('run',?,?,?,?)", (run["id"], user["id"], json.dumps(run), time.time()))
 
     def claim_run(self):
@@ -178,8 +178,8 @@ class Store:
         now = time.time()
         constraints = [("run", "global", positive_int("REHEARSAL_REPO_RUNS_PER_DAY", 12), 86400),
                        ("run-hour", "global", positive_int("REHEARSAL_REPO_RUNS_PER_HOUR", 4), 3600),
-                       ("run-user", user["id"], 3 if user.get("github_id") else 1, 86400),
-                       ("run-peer", peer, 4, 86400)]
+                       ("run-user", user["id"], 3 if user.get("github_id") else positive_int("REHEARSAL_REPO_GUEST_RUNS_PER_DAY", 1), 86400),
+                       ("run-peer", peer, positive_int("REHEARSAL_REPO_PEER_RUNS_PER_DAY", 4), 86400)]
         remaining, resets = [], []
         with self.connect() as db:
             for kind, identity, limit, window in constraints:

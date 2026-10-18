@@ -208,6 +208,23 @@ def test_allowance_survives_restart_and_reports_when_guest_can_run(tmp_path):
     assert time.time() + 86300 < allowance["available_after"] < time.time() + 86500
 
 
+def test_judge_guest_allowance_matches_the_enforced_quota(tmp_path, monkeypatch):
+    monkeypatch.setenv("REHEARSAL_REPO_GUEST_RUNS_PER_DAY", "4")
+    monkeypatch.setenv("REHEARSAL_REPO_PEER_RUNS_PER_DAY", "12")
+    monkeypatch.setenv("REHEARSAL_REPO_RUNS_PER_HOUR", "12")
+    store = Store(tmp_path)
+    user = {"id": "judge"}
+    for index in range(4):
+        assert store.allowance(user, "peer")["remaining"] == 4 - index
+        run = {"id": str(index), "user_id": user["id"], "status": "queued"}
+        store.enqueue(run, user, "peer")
+        store.put("run", {**run, "status": "review"})
+    assert Store(tmp_path).allowance(user, "peer")["remaining"] == 0
+    with pytest.raises(Problem) as error:
+        store.enqueue({"id": "fifth", "user_id": user["id"], "status": "queued"}, user, "peer")
+    assert error.value.code == "repository_quota"
+
+
 @pytest.mark.asyncio
 async def test_sandbox_identity_rejects_redirects_and_scope_changes_and_caches_only_live_tokens(monkeypatch):
     import base64

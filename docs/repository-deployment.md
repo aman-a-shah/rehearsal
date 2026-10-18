@@ -2,6 +2,18 @@
 
 The website and API are independently deployable. The API needs persistent storage and a long-lived worker because a rehearsal can outlast an HTTP request. Closing the browser does not cancel a run.
 
+## Free temporary judge preview
+
+Use [render-demo.yaml](../render-demo.yaml) for a **Free** Render service with no persistent disk. This is a separate deployment choice from the paid configuration below. Vercel serves the website and proxies API requests to that free service. No hosting payment method is required; model calls and sandboxes still use the connected providers' existing allowances.
+
+Set `REHEARSAL_DEMO_INVITE` to a random 48+ character value, `REHEARSAL_DEMO_EXPIRES_AT` to a fixed Unix expiry timestamp, and `REHEARSAL_TEMPORARY_DEMO=1`. Share `<website-origin>/#invite=<value>` privately. The browser exchanges the fragment for a signed Secure, HttpOnly cookie and removes it from the URL. The invitation never enters the public source or frontend build. Protected API routes require access; health and invitation endpoints remain available. The website sends `noindex` headers. Invitations expire even if the server restarts.
+
+Public GitHub URLs, ZIP uploads, and three built-in examples work without GitHub OAuth registration. Guests can download verified patches. The demo permits four runs per guest, with shared hourly, daily, model-call, and sandbox limits. GitHub sign-in and draft PR publication remain optional additional configuration.
+
+Render's free service sleeps after 15 idle minutes, takes roughly a minute to wake, and discards local source, sessions, graph data, run history, and quota counters on sleep/restart. The invitation cookie remains valid, but visitors start a new workspace. The page retries during startup and tells visitors to download patches before leaving. Keep the invitation limited to judges; this configuration is temporary and does not provide durable storage or durable cross-restart usage accounting. See [Render's documented limits](https://render.com/docs/free).
+
+To end the preview, suspend/delete the free service or let the invitation expire. Do not upgrade it or attach a disk for the temporary preview.
+
 ## Persistent API
 
 Deploy the repository's `Dockerfile` using [render.yaml](../render.yaml) or an existing container host. The Render blueprint selects a paid Starter service and persistent disk. Use one replica, one Python worker, port 8080, and a volume at `/data`. Do not expose a Docker socket in the public API container.

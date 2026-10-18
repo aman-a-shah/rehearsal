@@ -27,4 +27,15 @@ EXAMPLES = {
             "CODEOWNERS": "src/pagination.js @platform\nsrc/feed.js @api\n",
         },
     },
+    "python-timeout": {
+        "name": "Relay / timeout-service", "runtime": "python",
+        "description": "The tests pass, but zero is treated as a missing timeout. Add a regression, then fix it.",
+        "incident": "timeout_config.py incorrectly treats integer zero as a missing timeout. Passing 0 should return 0 to disable the timeout; None and the empty string should still use the 30-second default. Preserve rejection of negative values and parsing of numeric strings. Existing tests miss integer zero.",
+        "files": {
+            "timeout_config.py": "def timeout_seconds(value=None):\n    seconds = int(value or 30)\n    if seconds < 0:\n        raise ValueError('Timeout cannot be negative')\n    return seconds\n",
+            "tests/test_timeout.py": "import unittest\nfrom timeout_config import timeout_seconds\n\nclass TimeoutTests(unittest.TestCase):\n    def test_default(self):\n        self.assertEqual(timeout_seconds(), 30)\n    def test_string(self):\n        self.assertEqual(timeout_seconds('12'), 12)\n    def test_empty_string(self):\n        self.assertEqual(timeout_seconds(''), 30)\n    def test_negative(self):\n        with self.assertRaises(ValueError):\n            timeout_seconds(-1)\n",
+            "CODEOWNERS": "timeout_config.py @reliability\n",
+            "README.md": "# Timeout service\nRun `python -m unittest discover -s tests -v`. Zero disables the timeout; None and empty strings use the default. The existing tests miss zero.\n",
+        },
+    },
 }

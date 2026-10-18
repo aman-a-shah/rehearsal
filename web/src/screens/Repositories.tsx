@@ -636,7 +636,7 @@ export default function Repositories() {
                   >
                     <Github size={14} /> My repositories
                   </button>
-                ) : (
+                ) : session.github_configured ? (
                   <a
                     className={`repo-button ${!session.github_configured ? "disabled" : ""}`}
                     href={
@@ -649,7 +649,7 @@ export default function Repositories() {
                   >
                     <Github size={14} /> Sign in with GitHub
                   </a>
-                )}
+                ) : null}
               </div>
               <input
                 ref={uploadRef}
@@ -680,8 +680,8 @@ export default function Repositories() {
               </p>
               {!session.github_configured && (
                 <p className="repo-config-note">
-                  GitHub sign-in needs server configuration. Public URL imports
-                  and ZIP uploads are available.
+                  Try a public GitHub repository or upload a ZIP. Download the
+                  verified patch to apply it locally.
                 </p>
               )}
               {githubRepos && (
@@ -738,8 +738,8 @@ export default function Repositories() {
               <div className="repo-section-kicker">See a complete repair</div>
               <h2>Start with a small, real bug.</h2>
               <p>
-                These are runnable codebases with failing tests. The model
-                generates the fixes when you run them.
+                Reproduce a failing test or uncover a missing regression.
+                These are real codebases; fixes are generated when you run them.
               </p>
             </div>
             <div>

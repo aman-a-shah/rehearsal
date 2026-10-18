@@ -7,6 +7,7 @@ import "@fontsource/geist/latin-700.css";
 import "@fontsource/geist-mono/latin-400.css";
 import App from "./App";
 import Repositories from "./screens/Repositories";
+import DemoGate from "./screens/DemoGate";
 import "./styles.css";
 import "./studio.css";
 import "./examples.css";
@@ -31,6 +32,8 @@ function Root() {
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <Root />
+    <DemoGate>
+      <Root />
+    </DemoGate>
   </React.StrictMode>,
 );

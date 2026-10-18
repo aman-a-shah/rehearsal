@@ -25,6 +25,7 @@ from .simulation import simulate, sweep
 from .security import Access, RequestLimits, ResourceBoundary
 from .repos.service import RepositoryService
 from .repos.routes import install_routes
+from .demo import install_demo
 
 load_dotenv(override=False)
 
@@ -105,6 +106,7 @@ def create_app(engine=None, runner_factory=Runner):
     app.state.access, app.state.limits = access, limits
     app.state.repositories = repositories
     install_routes(app, repositories)
+    install_demo(app, limits)
     frontend_host = urlparse(os.getenv("REHEARSAL_APP_ORIGIN", "")).hostname
     app.add_middleware(
         TrustedHostMiddleware, allowed_hosts=["127.0.0.1", "localhost", "testserver"] + ([parsed_origin.hostname] if public_origin else []) + ([frontend_host] if frontend_host else [])

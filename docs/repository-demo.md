@@ -1,5 +1,7 @@
 # Record a real repository repair
 
+For the temporary judge link, open the invitation first. Start with **Harbor / pricing-service**, then show a public GitHub import or ZIP upload. **Atlas / event-feed** exercises Node.js; **Relay / timeout-service** starts with passing tests and requires a generated failing regression. Download the patch before leaving because the free host clears workspaces when it sleeps. GitHub sign-in is optional for this preview.
+
 Use the Python pricing repository for the main demonstration. Its bug is visible in one assertion, while its graph also shows the checkout module and dependent tests. Keep a second tab open on the repository and a third on the eventual draft PR.
 
 ## Before recording
